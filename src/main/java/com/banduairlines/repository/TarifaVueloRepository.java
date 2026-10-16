@@ -18,4 +18,15 @@ public interface TarifaVueloRepository extends JpaRepository<TarifaVuelo, Long> 
             ORDER BY t.precio ASC
             """)
     List<TarifaVuelo> buscarTarifasActivasPorVuelo(@Param("vueloId") Long vueloId);
+
+    @Query("""
+            SELECT t FROM TarifaVuelo t
+            JOIN FETCH t.vuelo v
+            JOIN FETCH t.pack p
+            WHERE v.id IN :vueloIds
+              AND p.activo = true
+              AND t.precio >= 0
+            ORDER BY t.precio ASC, t.id ASC
+            """)
+    List<TarifaVuelo> buscarTarifasActivasPorVuelos(@Param("vueloIds") List<Long> vueloIds);
 }
