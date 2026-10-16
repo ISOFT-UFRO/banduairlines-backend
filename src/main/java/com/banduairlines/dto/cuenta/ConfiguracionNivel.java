@@ -1,4 +1,4 @@
-package com.banduairlines.model;
+package com.banduairlines.dto.cuenta;
 
 import com.banduairlines.model.enums.Nivel;
 

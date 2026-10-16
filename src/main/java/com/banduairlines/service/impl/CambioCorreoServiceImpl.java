@@ -86,8 +86,8 @@ public class CambioCorreoServiceImpl implements CambioCorreoService {
         String codigo = generarCodigo();
         Instant expiracion = ahora.plus(minutosExpiracion, ChronoUnit.MINUTES);
 
-        com.banduairlines.model.SolicitudCambioCorreo entidad =
-                com.banduairlines.model.SolicitudCambioCorreo.builder()
+        com.banduairlines.persistence.cuenta.SolicitudCambioCorreoEntity entidad =
+                com.banduairlines.persistence.cuenta.SolicitudCambioCorreoEntity.builder()
                         .usuario(usuario)
                         .nuevoCorreo(nuevoCorreo)
                         .codigoHash(passwordEncoder.encode(codigo))
@@ -95,7 +95,7 @@ public class CambioCorreoServiceImpl implements CambioCorreoService {
                         .fechaExpiracion(expiracion)
                         .build();
 
-        com.banduairlines.model.SolicitudCambioCorreo guardada =
+        com.banduairlines.persistence.cuenta.SolicitudCambioCorreoEntity guardada =
                 solicitudRepository.saveAndFlush(entidad);
 
         enviarCodigo(nuevoCorreo, codigo, expiracion);
@@ -114,7 +114,7 @@ public class CambioCorreoServiceImpl implements CambioCorreoService {
             ConfirmacionCambioCorreo confirmacion
     ) {
         Usuario usuario = obtenerUsuarioActual();
-        com.banduairlines.model.SolicitudCambioCorreo solicitud =
+        com.banduairlines.persistence.cuenta.SolicitudCambioCorreoEntity solicitud =
                 buscarSolicitud(idSolicitud, usuario.getId());
         Instant ahora = clock.instant();
 
@@ -151,7 +151,7 @@ public class CambioCorreoServiceImpl implements CambioCorreoService {
     @Transactional
     public void cancelar(Long idSolicitud) {
         Usuario usuario = obtenerUsuarioActual();
-        com.banduairlines.model.SolicitudCambioCorreo solicitud =
+        com.banduairlines.persistence.cuenta.SolicitudCambioCorreoEntity solicitud =
                 buscarSolicitud(idSolicitud, usuario.getId());
 
         if (solicitud.fueCancelada() || solicitud.fueConfirmada()) {
@@ -177,7 +177,7 @@ public class CambioCorreoServiceImpl implements CambioCorreoService {
         return usuario;
     }
 
-    private com.banduairlines.model.SolicitudCambioCorreo buscarSolicitud(
+    private com.banduairlines.persistence.cuenta.SolicitudCambioCorreoEntity buscarSolicitud(
             Long idSolicitud,
             Long idUsuario
     ) {
@@ -189,7 +189,7 @@ public class CambioCorreoServiceImpl implements CambioCorreoService {
     }
 
     private void invalidarSolicitudesAnteriores(Long idUsuario, Instant ahora) {
-        List<com.banduairlines.model.SolicitudCambioCorreo> anteriores =
+        List<com.banduairlines.persistence.cuenta.SolicitudCambioCorreoEntity> anteriores =
                 solicitudRepository
                 .findByUsuario_IdAndFechaConfirmacionIsNullAndFechaCancelacionIsNull(
                                 idUsuario

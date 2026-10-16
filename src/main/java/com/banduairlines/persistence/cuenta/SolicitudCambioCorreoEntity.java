@@ -1,5 +1,6 @@
-package com.banduairlines.model;
+package com.banduairlines.persistence.cuenta;
 
+import com.banduairlines.model.Usuario;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -37,7 +38,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class SolicitudCambioCorreo {
+public class SolicitudCambioCorreoEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -65,12 +66,6 @@ public class SolicitudCambioCorreo {
 
     @Column(name = "fecha_cancelacion")
     private Instant fechaCancelacion;
-
-    public boolean estaVigente(Instant ahora) {
-        return puedeUtilizarse()
-                && fechaExpiracion != null
-                && fechaExpiracion.isAfter(ahora);
-    }
 
     public boolean estaVencida(Instant ahora) {
         return fechaExpiracion == null || !fechaExpiracion.isAfter(ahora);

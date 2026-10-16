@@ -3,7 +3,7 @@ package com.banduairlines.service.impl;
 import com.banduairlines.exception.CodigosError;
 import com.banduairlines.exception.ReglaNegocioException;
 import com.banduairlines.exception.ValidacionException;
-import com.banduairlines.model.ConfiguracionNivel;
+import com.banduairlines.dto.cuenta.ConfiguracionNivel;
 import com.banduairlines.model.enums.Nivel;
 import com.banduairlines.service.cuenta.GestionNivelService;
 import org.springframework.beans.factory.annotation.Value;
