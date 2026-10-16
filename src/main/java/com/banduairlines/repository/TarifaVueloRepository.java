@@ -1,9 +1,21 @@
 package com.banduairlines.repository;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-
 import com.banduairlines.model.TarifaVuelo;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
-public interface TarifaVueloRepository extends JpaRepository<TarifaVuelo, Long>{
-    
+import java.util.List;
+
+public interface TarifaVueloRepository extends JpaRepository<TarifaVuelo, Long> {
+
+    @Query("""
+            SELECT t FROM TarifaVuelo t
+            JOIN FETCH t.vuelo v
+            JOIN FETCH t.pack p
+            WHERE v.id = :vueloId
+              AND p.activo = true
+            ORDER BY t.precio ASC
+            """)
+    List<TarifaVuelo> buscarTarifasActivasPorVuelo(@Param("vueloId") Long vueloId);
 }
