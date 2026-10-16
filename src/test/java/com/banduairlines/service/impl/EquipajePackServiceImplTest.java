@@ -8,11 +8,17 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import com.banduairlines.exception.ReglaNegocioException;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -70,5 +76,41 @@ class EquipajePackServiceImplTest {
         assertThat(pack.getActivo()).isTrue();
 
         verify(packs).saveAndFlush(pack);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0, 23",
+            "1, 0"
+    })
+    void actualizarRechazaEquipajeIncoherenteSinModificarElPack(
+            int piezas, int kilos) {
+
+        PackTarifario pack = PackTarifario.builder()
+                .id(1L)
+                .incluyeEquipajeCabina(false)
+                .piezasBodegaIncluidas(1)
+                .kgPorPiezaBodega(23)
+                .build();
+
+        when(packs.findById(1L))
+                .thenReturn(Optional.of(pack));
+
+        EquipajePackSolicitud solicitud = new EquipajePackSolicitud(
+                true,
+                piezas,
+                kilos);
+
+        assertThatThrownBy(() -> servicio.actualizar(1L, solicitud))
+                .isInstanceOfSatisfying(
+                        ReglaNegocioException.class,
+                        excepcion -> assertThat(excepcion.getCodigo())
+                                .isEqualTo("EQUIPAJE_BODEGA_INCOHERENTE"));
+
+        assertThat(pack.getIncluyeEquipajeCabina()).isFalse();
+        assertThat(pack.getPiezasBodegaIncluidas()).isEqualTo(1);
+        assertThat(pack.getKgPorPiezaBodega()).isEqualTo(23);
+
+        verify(packs, never()).saveAndFlush(any(PackTarifario.class));
     }
 }
