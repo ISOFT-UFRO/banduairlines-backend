@@ -2,15 +2,24 @@ package com.banduairlines.service.impl;
 
 import com.banduairlines.dto.busqueda.ClaseCabinaDisponibilidadResponse;
 import com.banduairlines.dto.busqueda.ItinerarioVueloResponse;
+import com.banduairlines.dto.busqueda.ProgramacionVueloRequest;
+import com.banduairlines.dto.busqueda.ProgramacionVueloResponse;
 import com.banduairlines.dto.busqueda.TramoVueloResponse;
 import com.banduairlines.exception.ReglaNegocioException;
 import com.banduairlines.model.Aeropuerto;
+import com.banduairlines.model.Avion;
+import com.banduairlines.model.Ruta;
 import com.banduairlines.model.TarifaVuelo;
 import com.banduairlines.model.Vuelo;
 import com.banduairlines.model.enums.ClaseCabina;
+import com.banduairlines.model.enums.Estado;
+import com.banduairlines.model.enums.EstadoReserva;
 import com.banduairlines.model.enums.EstadoVuelo;
 import com.banduairlines.repository.AsientoRepository;
+import com.banduairlines.repository.AvionRepository;
+import com.banduairlines.repository.BoletoRepository;
 import com.banduairlines.repository.DisponibilidadBusquedaRepository;
+import com.banduairlines.repository.RutaRepository;
 import com.banduairlines.repository.TarifaVueloRepository;
 import com.banduairlines.repository.VueloRepository;
 import com.banduairlines.service.busqueda.BusquedaVueloService;
@@ -39,10 +48,19 @@ public class BusquedaVueloServiceImpl implements BusquedaVueloService {
             EstadoVuelo.PROGRAMADO,
             EstadoVuelo.RETRASADO
     );
+    private static final Set<EstadoVuelo> ESTADOS_OCUPACION_AERONAVE = EnumSet.of(
+            EstadoVuelo.PROGRAMADO,
+            EstadoVuelo.EMBARCANDO,
+            EstadoVuelo.EN_VUELO,
+            EstadoVuelo.RETRASADO
+    );
 
     private final VueloRepository vueloRepository;
     private final TarifaVueloRepository tarifaVueloRepository;
     private final AsientoRepository asientoRepository;
+    private final BoletoRepository boletoRepository;
+    private final RutaRepository rutaRepository;
+    private final AvionRepository avionRepository;
     private final DisponibilidadBusquedaRepository disponibilidadRepository;
     private final Clock clock;
 
@@ -50,12 +68,18 @@ public class BusquedaVueloServiceImpl implements BusquedaVueloService {
             VueloRepository vueloRepository,
             TarifaVueloRepository tarifaVueloRepository,
             AsientoRepository asientoRepository,
+            BoletoRepository boletoRepository,
+            RutaRepository rutaRepository,
+            AvionRepository avionRepository,
             DisponibilidadBusquedaRepository disponibilidadRepository,
             Clock clock
     ) {
         this.vueloRepository = vueloRepository;
         this.tarifaVueloRepository = tarifaVueloRepository;
         this.asientoRepository = asientoRepository;
+        this.boletoRepository = boletoRepository;
+        this.rutaRepository = rutaRepository;
+        this.avionRepository = avionRepository;
         this.disponibilidadRepository = disponibilidadRepository;
         this.clock = clock;
     }
@@ -204,6 +228,149 @@ public class BusquedaVueloServiceImpl implements BusquedaVueloService {
         }
 
         return respuesta;
+    }
+
+    @Override
+    @Transactional
+    public ProgramacionVueloResponse programarVuelo(ProgramacionVueloRequest request) {
+        String codigoNormalizado = request.codigoVuelo().trim().toUpperCase();
+        validarHorarios(request.salidaProgramada(), request.llegadaProgramada());
+
+        Ruta ruta = obtenerYValidarRutaDisponible(request.rutaId());
+        Avion aeronave = obtenerYValidarAeronaveDisponible(
+                request.aeronaveId(),
+                request.salidaProgramada(),
+                request.llegadaProgramada(),
+                null
+        );
+
+        if (vueloRepository.existePorCodigoVueloYSalida(codigoNormalizado, request.salidaProgramada(), null)) {
+            throw new ReglaNegocioException("Ya existe un vuelo programado con el código " + codigoNormalizado + " para la fecha y hora de salida indicada")
+                    .conCodigo("VUELO_DUPLICADO");
+        }
+
+        Vuelo nuevoVuelo = Vuelo.builder()
+                .codigoVuelo(codigoNormalizado)
+                .ruta(ruta)
+                .aeronave(aeronave)
+                .salidaProgramada(request.salidaProgramada())
+                .llegadaProgramada(request.llegadaProgramada())
+                .estado(EstadoVuelo.PROGRAMADO)
+                .build();
+
+        Vuelo guardado = vueloRepository.save(nuevoVuelo);
+        return mapearProgramacionResponse(guardado);
+    }
+
+    @Override
+    @Transactional
+    public ProgramacionVueloResponse modificarProgramacionVuelo(Long vueloId, ProgramacionVueloRequest request) {
+        Vuelo vueloExistente = vueloRepository.findByIdConDetalles(vueloId)
+                .orElseThrow(() -> new ReglaNegocioException("No se encontró el vuelo con ID: " + vueloId)
+                        .conCodigo("VUELO_NO_ENCONTRADO"));
+
+        if (vueloExistente.getEstado() == EstadoVuelo.CANCELADO || vueloExistente.getEstado() == EstadoVuelo.ATERRIZADO) {
+            throw new ReglaNegocioException("No se puede modificar la programación de un vuelo en estado " + vueloExistente.getEstado().name())
+                    .conCodigo("ESTADO_VUELO_NO_MODIFICABLE");
+        }
+
+        String codigoNormalizado = request.codigoVuelo().trim().toUpperCase();
+        validarHorarios(request.salidaProgramada(), request.llegadaProgramada());
+
+        Ruta ruta = obtenerYValidarRutaDisponible(request.rutaId());
+        Avion aeronave = obtenerYValidarAeronaveDisponible(
+                request.aeronaveId(),
+                request.salidaProgramada(),
+                request.llegadaProgramada(),
+                vueloId
+        );
+
+        if (vueloRepository.existePorCodigoVueloYSalida(codigoNormalizado, request.salidaProgramada(), vueloId)) {
+            throw new ReglaNegocioException("Ya existe otro vuelo con el código " + codigoNormalizado + " en la misma fecha y hora de salida")
+                    .conCodigo("VUELO_DUPLICADO");
+        }
+
+        vueloExistente.setCodigoVuelo(codigoNormalizado);
+        vueloExistente.setRuta(ruta);
+        vueloExistente.setAeronave(aeronave);
+        vueloExistente.setSalidaProgramada(request.salidaProgramada());
+        vueloExistente.setLlegadaProgramada(request.llegadaProgramada());
+
+        Vuelo actualizado = vueloRepository.save(vueloExistente);
+        return mapearProgramacionResponse(actualizado);
+    }
+
+    private void validarHorarios(LocalDateTime salida, LocalDateTime llegada) {
+        if (!llegada.isAfter(salida)) {
+            throw new ReglaNegocioException("La fecha y hora de llegada debe ser posterior a la fecha y hora de salida")
+                    .conCodigo("HORARIO_VUELO_INVALIDO");
+        }
+    }
+
+    private Ruta obtenerYValidarRutaDisponible(Long rutaId) {
+        Ruta ruta = rutaRepository.findById(rutaId)
+                .orElseThrow(() -> new ReglaNegocioException("No se encontró la ruta con ID: " + rutaId)
+                        .conCodigo("RUTA_NO_ENCONTRADA"));
+
+        if (Boolean.FALSE.equals(ruta.getActiva())) {
+            throw new ReglaNegocioException("La ruta seleccionada no se encuentra activa para programar vuelos")
+                    .conCodigo("RUTA_INACTIVA");
+        }
+        return ruta;
+    }
+
+    private Avion obtenerYValidarAeronaveDisponible(
+            Long aeronaveId,
+            LocalDateTime salidaProgramada,
+            LocalDateTime llegadaProgramada,
+            Long vueloIdExcluir
+    ) {
+        Avion aeronave = avionRepository.findById(aeronaveId)
+                .orElseThrow(() -> new ReglaNegocioException("No se encontró la aeronave con ID: " + aeronaveId)
+                        .conCodigo("AERONAVE_NO_ENCONTRADA"));
+
+        if (aeronave.getEstado() != Estado.ACTIVA) {
+            throw new ReglaNegocioException("La aeronave seleccionada no está disponible (estado actual: " + aeronave.getEstado().name() + ")")
+                    .conCodigo("AERONAVE_NO_DISPONIBLE");
+        }
+
+        boolean existeCruceHorario = vueloRepository.existeSolapamientoAeronave(
+                aeronaveId,
+                salidaProgramada,
+                llegadaProgramada,
+                ESTADOS_OCUPACION_AERONAVE,
+                vueloIdExcluir
+        );
+
+        if (existeCruceHorario) {
+            throw new ReglaNegocioException("La aeronave ya tiene otro vuelo asignado que se solapa con el rango horario solicitado")
+                    .conCodigo("AERONAVE_HORARIO_SOLAPADO");
+        }
+
+        return aeronave;
+    }
+
+    private ProgramacionVueloResponse mapearProgramacionResponse(Vuelo vuelo) {
+        long duracionMinutos = Duration.between(
+                vuelo.getSalidaProgramada(),
+                vuelo.getLlegadaProgramada()
+        ).toMinutes();
+
+        return ProgramacionVueloResponse.builder()
+                .id(vuelo.getId())
+                .codigoVuelo(vuelo.getCodigoVuelo())
+                .rutaId(vuelo.getRuta().getId())
+                .origenCodigoIata(vuelo.getRuta().getOrigen().getCodigoIata())
+                .destinoCodigoIata(vuelo.getRuta().getDestino().getCodigoIata())
+                .aeronaveId(vuelo.getAeronave().getId())
+                .aeronaveMatricula(vuelo.getAeronave().getMatricula())
+                .aeronaveModelo(vuelo.getAeronave().getModelo())
+                .salidaProgramada(vuelo.getSalidaProgramada())
+                .llegadaProgramada(vuelo.getLlegadaProgramada())
+                .duracionMinutos(duracionMinutos)
+                .estado(vuelo.getEstado().name())
+                .createdAt(vuelo.getCreatedAt())
+                .build();
     }
 
     private ItinerarioVueloResponse construirItinerarioDirecto(Vuelo vuelo) {
