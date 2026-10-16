@@ -24,9 +24,6 @@ public class Avion {
     @Column(nullable = false, length = 60)
     private String modelo;
 
-    @Column(name = "capacidad_carga", nullable = false)
-    private Double capacidadCarga;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default

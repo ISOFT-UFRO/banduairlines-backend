@@ -31,7 +31,6 @@ public class AvionService {
         Avion avion = Avion.builder()
                 .matricula(request.getMatricula())
                 .modelo(request.getModelo())
-                .capacidadCarga(request.getCapacidadCarga())
                 .estado(Estado.ACTIVA)
                 .build();
 
@@ -57,7 +56,6 @@ public class AvionService {
                 .id(avionGuardado.getId())
                 .matricula(avionGuardado.getMatricula())
                 .modelo(avionGuardado.getModelo())
-                .capacidadCarga(avionGuardado.getCapacidadCarga())
                 .estado(avionGuardado.getEstado())
                 .totalAsientos(totalAsientos)
                 .build();
@@ -74,7 +72,6 @@ public class AvionService {
                 .id(avion.getId())
                 .matricula(avion.getMatricula())
                 .modelo(avion.getModelo())
-                .capacidadCarga(avion.getCapacidadCarga())
                 .estado(avion.getEstado())
                 .totalAsientos(totalAsientos)
                 .build();

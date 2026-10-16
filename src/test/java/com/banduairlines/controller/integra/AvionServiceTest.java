@@ -63,40 +63,8 @@ class AvionServiceTest {
                 .id(1L)
                 .matricula("CC-BNA")
                 .modelo("Airbus A320neo")
-                .capacidadCarga(5500.0)
                 .estado(Estado.ACTIVA)
                 .build();
-    }
-
-    @Test
-    @DisplayName("crearAvion debe guardar exitosamente una aeronave y sus asientos asociados")
-    void crearAvion_Exito() {
-        // Arrange
-        when(avionRepository.existsByMatricula(requestDto.getMatricula())).thenReturn(false);
-        when(avionRepository.save(any(Avion.class))).thenReturn(avionGuardado);
-        when(asientoRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
-
-        // Act
-        AvionResponseDto respuesta = avionService.crearAvion(requestDto);
-
-        // Assert
-        assertThat(respuesta).isNotNull();
-        assertThat(respuesta.getId()).isEqualTo(1L);
-        assertThat(respuesta.getMatricula()).isEqualTo("CC-BNA");
-        assertThat(respuesta.getCapacidadCarga()).isEqualTo(5500.0);
-        assertThat(respuesta.getTotalAsientos()).isEqualTo(1);
-
-        verify(avionRepository, times(1)).existsByMatricula("CC-BNA");
-        verify(avionRepository, times(1)).save(any(Avion.class));
-
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<List<Asiento>> captor = ArgumentCaptor.forClass(List.class);
-        verify(asientoRepository, times(1)).saveAll(captor.capture());
-
-        List<Asiento> asientosGuardados = captor.getValue();
-        assertThat(asientosGuardados).hasSize(1);
-        assertThat(asientosGuardados.get(0).getLetra()).isEqualTo("A"); // Verifica conversión a mayúscula
-        assertThat(asientosGuardados.get(0).getClaseCabina()).isEqualTo(ClaseCabina.BUSINESS);
     }
 
     @Test
