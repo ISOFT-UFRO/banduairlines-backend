@@ -50,7 +50,7 @@ class ReservaPagoServiceImplTest {
     void setUp() {
         service = new ReservaPagoServiceImpl(reservaAcceso, reservaRepository, boletoRepository,
                 pasajeroRepository, new CalculadoraTotalReserva(), cobroReservaService, 15);
-        reserva = ReservaFixtures.reserva(EstadoReserva.EN_CURSO);
+        reserva = ReservaFixtures.reserva(EstadoReserva.PENDIENTE_PAGO);
         reserva.setCodigoReserva(null);
         boleto = ReservaFixtures.boleto(reserva, 1, 10, 187980, ReservaFixtures.packLight());
         when(reservaAcceso.obtenerAutorizada(1L, "tok")).thenReturn(reserva);
@@ -62,7 +62,7 @@ class ReservaPagoServiceImplTest {
     }
 
     @Test
-    void iniciarPago_totalCoincide_generaCodigoPasaAPendientePagoYPideElCobro() {
+    void iniciarPago_primerIntento_generaCodigoRenuevaElBloqueoYPideElCobro() {
         PagoIniciadoResponse r = service.iniciarPago(1L, "tok", new IniciarPagoRequest(187980L));
 
         assertThat(r.estado()).isEqualTo(EstadoReserva.PENDIENTE_PAGO);
@@ -70,6 +70,18 @@ class ReservaPagoServiceImplTest {
         assertThat(r.urlPago()).isEqualTo("https://sandbox.flow.cl/pay");
         assertThat(r.montoCLP()).isEqualTo(187980);
         assertThat(reserva.getExpiraEn()).isEqualTo(ReservaFixtures.AHORA.plusMinutes(15));
+        verify(cobroReservaService).iniciarCobro(reserva, 187980, "tomas@correo.cl");
+    }
+
+    @Test
+    void iniciarPago_reintentoTrasRechazo_conservaElMismoVencimiento() {
+        when(cobroReservaService.tieneCobroIniciado(1L)).thenReturn(true);
+        reserva.setCodigoReserva("BX7K2M");
+
+        PagoIniciadoResponse r = service.iniciarPago(1L, "tok", new IniciarPagoRequest(187980L));
+
+        assertThat(r.codigoReserva()).isEqualTo("BX7K2M");
+        assertThat(reserva.getExpiraEn()).isEqualTo(ReservaFixtures.AHORA.plusMinutes(10));
         verify(cobroReservaService).iniciarCobro(reserva, 187980, "tomas@correo.cl");
     }
 
@@ -84,7 +96,7 @@ class ReservaPagoServiceImplTest {
 
         assertThat(boleto.getPrecioTarifa()).isEqualByComparingTo("195980");
         assertThat(reserva.getTotal()).isEqualByComparingTo("195980");
-        assertThat(reserva.getEstado()).isEqualTo(EstadoReserva.EN_CURSO);
+        assertThat(reserva.getEstado()).isEqualTo(EstadoReserva.PENDIENTE_PAGO);
         verify(cobroReservaService, never()).iniciarCobro(any(), anyLong(), anyString());
     }
 

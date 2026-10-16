@@ -42,7 +42,7 @@ class ReservaPromocionServiceImplTest {
     void setUp() {
         service = new ReservaPromocionServiceImpl(reservaAcceso, reservaRepository, boletoRepository,
                 promocionRepository, new CalculadoraTotalReserva());
-        reserva = ReservaFixtures.reserva(EstadoReserva.EN_CURSO);
+        reserva = ReservaFixtures.reserva(EstadoReserva.PENDIENTE_PAGO);
         when(reservaAcceso.obtenerAutorizada(1L, "tok")).thenReturn(reserva);
         lenient().when(reservaAcceso.ahora()).thenReturn(ReservaFixtures.AHORA);
         lenient().when(boletoRepository.findByReserva_IdOrderByOrdenTramoAscIdAsc(1L)).thenReturn(List.of(
