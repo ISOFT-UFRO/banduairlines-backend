@@ -21,18 +21,17 @@ public interface VueloRepository extends JpaRepository<Vuelo, Long> {
             JOIN FETCH v.aeronave a
             WHERE UPPER(o.codigoIata) = UPPER(:origenIata)
               AND UPPER(d.codigoIata) = UPPER(:destinoIata)
-              AND r.activa = true
-              AND v.estado IN :estadosValidos
-              AND v.salidaProgramada >= :inicioRango
-              AND v.salidaProgramada < :finRango
+              AND v.salidaProgramada >= :inicioDia
+              AND v.salidaProgramada < :finDia
+              AND v.estado IN :estados
             ORDER BY v.salidaProgramada ASC
             """)
     List<Vuelo> buscarVuelosDirectos(
             @Param("origenIata") String origenIata,
             @Param("destinoIata") String destinoIata,
-            @Param("inicioRango") LocalDateTime inicioRango,
-            @Param("finRango") LocalDateTime finRango,
-            @Param("estadosValidos") Collection<EstadoVuelo> estadosValidos
+            @Param("inicioDia") LocalDateTime inicioDia,
+            @Param("finDia") LocalDateTime finDia,
+            @Param("estados") Collection<EstadoVuelo> estados
     );
 
     @Query("""
@@ -43,18 +42,17 @@ public interface VueloRepository extends JpaRepository<Vuelo, Long> {
             JOIN FETCH v.aeronave a
             WHERE UPPER(o.codigoIata) = UPPER(:origenIata)
               AND UPPER(d.codigoIata) <> UPPER(:destinoIata)
-              AND r.activa = true
-              AND v.estado IN :estadosValidos
-              AND v.salidaProgramada >= :inicioRango
-              AND v.salidaProgramada < :finRango
+              AND v.salidaProgramada >= :inicioDia
+              AND v.salidaProgramada < :finDia
+              AND v.estado IN :estados
             ORDER BY v.salidaProgramada ASC
             """)
     List<Vuelo> buscarPrimerosTramosParaConexion(
             @Param("origenIata") String origenIata,
             @Param("destinoIata") String destinoIata,
-            @Param("inicioRango") LocalDateTime inicioRango,
-            @Param("finRango") LocalDateTime finRango,
-            @Param("estadosValidos") Collection<EstadoVuelo> estadosValidos
+            @Param("inicioDia") LocalDateTime inicioDia,
+            @Param("finDia") LocalDateTime finDia,
+            @Param("estados") Collection<EstadoVuelo> estados
     );
 
     @Query("""
@@ -65,18 +63,17 @@ public interface VueloRepository extends JpaRepository<Vuelo, Long> {
             JOIN FETCH v.aeronave a
             WHERE UPPER(d.codigoIata) = UPPER(:destinoIata)
               AND UPPER(o.codigoIata) <> UPPER(:origenIata)
-              AND r.activa = true
-              AND v.estado IN :estadosValidos
-              AND v.salidaProgramada >= :inicioVentana
-              AND v.salidaProgramada <= :finVentana
+              AND v.salidaProgramada >= :desdeSalida
+              AND v.salidaProgramada <= :hastaSalida
+              AND v.estado IN :estados
             ORDER BY v.salidaProgramada ASC
             """)
     List<Vuelo> buscarSegundosTramosParaConexion(
             @Param("origenIata") String origenIata,
             @Param("destinoIata") String destinoIata,
-            @Param("inicioVentana") LocalDateTime inicioVentana,
-            @Param("finVentana") LocalDateTime finVentana,
-            @Param("estadosValidos") Collection<EstadoVuelo> estadosValidos
+            @Param("desdeSalida") LocalDateTime desdeSalida,
+            @Param("hastaSalida") LocalDateTime hastaSalida,
+            @Param("estados") Collection<EstadoVuelo> estados
     );
 
     @Query("""
@@ -88,4 +85,29 @@ public interface VueloRepository extends JpaRepository<Vuelo, Long> {
             WHERE v.id = :id
             """)
     Optional<Vuelo> findByIdConDetalles(@Param("id") Long id);
+
+    @Query("""
+            SELECT v FROM Vuelo v
+            JOIN FETCH v.ruta r
+            JOIN FETCH r.origen o
+            JOIN FETCH r.destino d
+            JOIN FETCH v.aeronave a
+            WHERE UPPER(v.codigoVuelo) = UPPER(:codigoVuelo)
+            """)
+    Optional<Vuelo> findByCodigoVueloConDetalles(@Param("codigoVuelo") String codigoVuelo);
+
+    @Query("""
+            SELECT v FROM Vuelo v
+            JOIN FETCH v.ruta r
+            JOIN FETCH r.origen o
+            JOIN FETCH r.destino d
+            JOIN FETCH v.aeronave a
+            WHERE v.salidaProgramada >= :inicioDia
+              AND v.salidaProgramada < :finDia
+            ORDER BY v.salidaProgramada ASC
+            """)
+    List<Vuelo> buscarPorRangoFecha(
+            @Param("inicioDia") LocalDateTime inicioDia,
+            @Param("finDia") LocalDateTime finDia
+    );
 }

@@ -1,0 +1,15 @@
+package com.banduairlines.service.busqueda;
+
+import com.banduairlines.dto.busqueda.ItinerarioVueloResponse;
+
+import java.time.LocalDate;
+import java.util.List;
+
+public interface BusquedaVueloService {
+
+    List<ItinerarioVueloResponse> obtenerAlternativasItinerario(
+            String origenIata,
+            String destinoIata,
+            LocalDate fechaSalida
+    );
+}
