@@ -16,7 +16,7 @@ import com.banduairlines.service.reserva.CalculadoraTotalReserva;
 import com.banduairlines.service.reserva.ReservaAcceso;
 import com.banduairlines.service.reserva.ReservaResultadoPagoService;
 
- //Endpoint 13
+ //Endpoint 13, se dejo los import de los codigo de los endpoint hecho por otro para que el merge no halla problema
 @Service
 public class ReservaResultadoPagoServiceImpl implements ReservaResultadoPagoService {
 
