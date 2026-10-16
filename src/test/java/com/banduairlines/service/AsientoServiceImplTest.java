@@ -18,10 +18,11 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import com.banduairlines.service.impl.AsientoServiceImpl;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class AsientoServiceTest {
+class AsientoServiceImplTest {
 
     @Mock
     private AsientoRepository asientoRepository;
@@ -29,7 +30,7 @@ class AsientoServiceTest {
     private AvionRepository avionRepository;
 
     @InjectMocks
-    private AsientoService asientoService;
+    private AsientoServiceImpl asientoService;
 
     private Avion avion;
     private Asiento asiento;
@@ -46,7 +47,7 @@ class AsientoServiceTest {
                 .aeronave(avion)
                 .fila(1)
                 .letra("A")
-                .claseCabina(ClaseCabina.BUSINESS)   // <-- ajustado
+                .claseCabina(ClaseCabina.BUSINESS) // <-- ajustado
                 .esPreferente(true)
                 .build();
     }

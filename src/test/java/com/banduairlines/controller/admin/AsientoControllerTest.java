@@ -3,7 +3,7 @@ package com.banduairlines.controller.admin;
 import com.banduairlines.model.Asiento;
 import com.banduairlines.model.Avion;
 import com.banduairlines.model.enums.ClaseCabina;
-import com.banduairlines.service.AsientoService;
+import com.banduairlines.service.admin.AsientoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
