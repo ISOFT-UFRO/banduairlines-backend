@@ -110,4 +110,32 @@ public interface VueloRepository extends JpaRepository<Vuelo, Long> {
             @Param("inicioDia") LocalDateTime inicioDia,
             @Param("finDia") LocalDateTime finDia
     );
+
+    @Query("""
+            SELECT COUNT(v) > 0 FROM Vuelo v
+            WHERE v.aeronave.id = :aeronaveId
+              AND v.estado IN :estadosActivos
+              AND (:vueloIdExcluir IS NULL OR v.id <> :vueloIdExcluir)
+              AND v.salidaProgramada < :llegadaProgramada
+              AND v.llegadaProgramada > :salidaProgramada
+            """)
+    boolean existeSolapamientoAeronave(
+            @Param("aeronaveId") Long aeronaveId,
+            @Param("salidaProgramada") LocalDateTime salidaProgramada,
+            @Param("llegadaProgramada") LocalDateTime llegadaProgramada,
+            @Param("estadosActivos") Collection<EstadoVuelo> estadosActivos,
+            @Param("vueloIdExcluir") Long vueloIdExcluir
+    );
+
+    @Query("""
+            SELECT COUNT(v) > 0 FROM Vuelo v
+            WHERE UPPER(v.codigoVuelo) = UPPER(:codigoVuelo)
+              AND v.salidaProgramada = :salidaProgramada
+              AND (:vueloIdExcluir IS NULL OR v.id <> :vueloIdExcluir)
+            """)
+    boolean existePorCodigoVueloYSalida(
+            @Param("codigoVuelo") String codigoVuelo,
+            @Param("salidaProgramada") LocalDateTime salidaProgramada,
+            @Param("vueloIdExcluir") Long vueloIdExcluir
+    );
 }
