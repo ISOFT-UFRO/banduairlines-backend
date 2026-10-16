@@ -2,6 +2,8 @@ package com.banduairlines.service.busqueda;
 
 import com.banduairlines.dto.busqueda.ClaseCabinaDisponibilidadResponse;
 import com.banduairlines.dto.busqueda.ItinerarioVueloResponse;
+import com.banduairlines.dto.busqueda.ProgramacionVueloRequest;
+import com.banduairlines.dto.busqueda.ProgramacionVueloResponse;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -15,4 +17,8 @@ public interface BusquedaVueloService {
     );
 
     List<ClaseCabinaDisponibilidadResponse> obtenerClasesCabinaDisponibles(Long vueloId);
+
+    ProgramacionVueloResponse programarVuelo(ProgramacionVueloRequest request);
+
+    ProgramacionVueloResponse modificarProgramacionVuelo(Long vueloId, ProgramacionVueloRequest request);
 }
