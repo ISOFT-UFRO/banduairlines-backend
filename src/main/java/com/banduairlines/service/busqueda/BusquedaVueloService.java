@@ -1,5 +1,6 @@
 package com.banduairlines.service.busqueda;
 
+import com.banduairlines.dto.busqueda.ClaseCabinaDisponibilidadResponse;
 import com.banduairlines.dto.busqueda.ItinerarioVueloResponse;
 
 import java.time.LocalDate;
@@ -12,4 +13,6 @@ public interface BusquedaVueloService {
             String destinoIata,
             LocalDate fechaSalida
     );
+
+    List<ClaseCabinaDisponibilidadResponse> obtenerClasesCabinaDisponibles(Long vueloId);
 }

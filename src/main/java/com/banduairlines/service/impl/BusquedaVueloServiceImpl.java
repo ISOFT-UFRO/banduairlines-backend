@@ -1,24 +1,35 @@
 package com.banduairlines.service.impl;
 
+import com.banduairlines.dto.busqueda.ClaseCabinaDisponibilidadResponse;
 import com.banduairlines.dto.busqueda.ItinerarioVueloResponse;
 import com.banduairlines.dto.busqueda.TramoVueloResponse;
 import com.banduairlines.exception.ReglaNegocioException;
 import com.banduairlines.model.Aeropuerto;
+import com.banduairlines.model.TarifaVuelo;
 import com.banduairlines.model.Vuelo;
+import com.banduairlines.model.enums.ClaseCabina;
+import com.banduairlines.model.enums.EstadoReserva;
 import com.banduairlines.model.enums.EstadoVuelo;
+import com.banduairlines.repository.AsientoRepository;
+import com.banduairlines.repository.BoletoRepository;
+import com.banduairlines.repository.TarifaVueloRepository;
 import com.banduairlines.repository.VueloRepository;
 import com.banduairlines.service.busqueda.BusquedaVueloService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -32,9 +43,20 @@ public class BusquedaVueloServiceImpl implements BusquedaVueloService {
     );
 
     private final VueloRepository vueloRepository;
+    private final TarifaVueloRepository tarifaVueloRepository;
+    private final AsientoRepository asientoRepository;
+    private final BoletoRepository boletoRepository;
 
-    public BusquedaVueloServiceImpl(VueloRepository vueloRepository) {
+    public BusquedaVueloServiceImpl(
+            VueloRepository vueloRepository,
+            TarifaVueloRepository tarifaVueloRepository,
+            AsientoRepository asientoRepository,
+            BoletoRepository boletoRepository
+    ) {
         this.vueloRepository = vueloRepository;
+        this.tarifaVueloRepository = tarifaVueloRepository;
+        this.asientoRepository = asientoRepository;
+        this.boletoRepository = boletoRepository;
     }
 
     @Override
@@ -120,6 +142,64 @@ public class BusquedaVueloServiceImpl implements BusquedaVueloService {
                 .thenComparingInt(ItinerarioVueloResponse::cantidadEscalas));
 
         return alternativas;
+    }
+
+    @Override
+    public List<ClaseCabinaDisponibilidadResponse> obtenerClasesCabinaDisponibles(Long vueloId) {
+        Vuelo vuelo = vueloRepository.findByIdConDetalles(vueloId)
+                .orElseThrow(() -> new ReglaNegocioException("No se encontró el vuelo con ID: " + vueloId)
+                        .conCodigo("VUELO_NO_ENCONTRADO"));
+
+        List<TarifaVuelo> tarifasActivas = tarifaVueloRepository.buscarTarifasActivasPorVuelo(vueloId);
+
+        Map<ClaseCabina, List<TarifaVuelo>> tarifasPorCabina = tarifasActivas.stream()
+                .collect(Collectors.groupingBy(
+                        TarifaVuelo::getClaseCabina,
+                        LinkedHashMap::new,
+                        Collectors.toList()
+                ));
+
+        List<ClaseCabinaDisponibilidadResponse> respuesta = new ArrayList<>();
+        Long aeronaveId = vuelo.getAeronave().getId();
+
+        for (Map.Entry<ClaseCabina, List<TarifaVuelo>> entry : tarifasPorCabina.entrySet()) {
+            ClaseCabina cabina = entry.getKey();
+            List<TarifaVuelo> tarifasCabina = entry.getValue();
+
+            int capacidadTotal = (int) asientoRepository.contarPorAeronaveYClaseCabina(aeronaveId, cabina);
+            int ocupados = (int) boletoRepository.contarOcupadosPorVueloYClaseCabina(
+                    vueloId,
+                    cabina,
+                    EstadoReserva.CANCELADA
+            );
+
+            int disponibles = capacidadTotal > 0 ? Math.max(0, capacidadTotal - ocupados) : 0;
+            boolean cabinaDisponible = capacidadTotal == 0 || disponibles > 0;
+
+            BigDecimal precioDesde = tarifasCabina.stream()
+                    .map(TarifaVuelo::getPrecio)
+                    .min(BigDecimal::compareTo)
+                    .orElse(BigDecimal.ZERO);
+
+            List<String> packs = tarifasCabina.stream()
+                    .map(t -> t.getPack().getNombre())
+                    .distinct()
+                    .toList();
+
+            respuesta.add(ClaseCabinaDisponibilidadResponse.builder()
+                    .vueloId(vuelo.getId())
+                    .codigoVuelo(vuelo.getCodigoVuelo())
+                    .claseCabina(cabina.name())
+                    .capacidadTotal(capacidadTotal)
+                    .asientosOcupados(ocupados)
+                    .asientosDisponibles(disponibles)
+                    .disponible(cabinaDisponible)
+                    .precioDesde(precioDesde)
+                    .packsDisponibles(packs)
+                    .build());
+        }
+
+        return respuesta;
     }
 
     private ItinerarioVueloResponse construirItinerarioDirecto(Vuelo vuelo) {
