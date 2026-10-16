@@ -15,4 +15,6 @@ public interface BusquedaVueloService {
     );
 
     List<ClaseCabinaDisponibilidadResponse> obtenerClasesCabinaDisponibles(Long vueloId);
+
+    List<ClaseCabinaDisponibilidadResponse> obtenerClasesCabinaDisponibles(Long vueloId, long asientosNecesarios);
 }

@@ -8,10 +8,9 @@ import com.banduairlines.model.Aeropuerto;
 import com.banduairlines.model.TarifaVuelo;
 import com.banduairlines.model.Vuelo;
 import com.banduairlines.model.enums.ClaseCabina;
-import com.banduairlines.model.enums.EstadoReserva;
 import com.banduairlines.model.enums.EstadoVuelo;
 import com.banduairlines.repository.AsientoRepository;
-import com.banduairlines.repository.BoletoRepository;
+import com.banduairlines.repository.DisponibilidadBusquedaRepository;
 import com.banduairlines.repository.TarifaVueloRepository;
 import com.banduairlines.repository.VueloRepository;
 import com.banduairlines.service.busqueda.BusquedaVueloService;
@@ -20,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -35,8 +35,6 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class BusquedaVueloServiceImpl implements BusquedaVueloService {
 
-    private static final long MIN_TIEMPO_ESCALA_MINUTOS = 45L;
-    private static final long MAX_TIEMPO_ESCALA_MINUTOS = 720L;
     private static final Set<EstadoVuelo> ESTADOS_DISPONIBLES = EnumSet.of(
             EstadoVuelo.PROGRAMADO,
             EstadoVuelo.RETRASADO
@@ -45,18 +43,21 @@ public class BusquedaVueloServiceImpl implements BusquedaVueloService {
     private final VueloRepository vueloRepository;
     private final TarifaVueloRepository tarifaVueloRepository;
     private final AsientoRepository asientoRepository;
-    private final BoletoRepository boletoRepository;
+    private final DisponibilidadBusquedaRepository disponibilidadRepository;
+    private final Clock clock;
 
     public BusquedaVueloServiceImpl(
             VueloRepository vueloRepository,
             TarifaVueloRepository tarifaVueloRepository,
             AsientoRepository asientoRepository,
-            BoletoRepository boletoRepository
+            DisponibilidadBusquedaRepository disponibilidadRepository,
+            Clock clock
     ) {
         this.vueloRepository = vueloRepository;
         this.tarifaVueloRepository = tarifaVueloRepository;
         this.asientoRepository = asientoRepository;
-        this.boletoRepository = boletoRepository;
+        this.disponibilidadRepository = disponibilidadRepository;
+        this.clock = clock;
     }
 
     @Override
@@ -104,16 +105,11 @@ public class BusquedaVueloServiceImpl implements BusquedaVueloService {
                     .min(LocalDateTime::compareTo)
                     .orElse(inicioDia);
 
-            LocalDateTime ultimaLlegada = primerosTramos.stream()
-                    .map(Vuelo::getLlegadaProgramada)
-                    .max(LocalDateTime::compareTo)
-                    .orElse(finDia);
-
             List<Vuelo> segundosTramosCandidatos = vueloRepository.buscarSegundosTramosParaConexion(
                     origenNormalizado,
                     destinoNormalizado,
-                    primeraLlegada.plusMinutes(MIN_TIEMPO_ESCALA_MINUTOS),
-                    ultimaLlegada.plusMinutes(MAX_TIEMPO_ESCALA_MINUTOS),
+                    primeraLlegada,
+                    null,
                     ESTADOS_DISPONIBLES
             );
 
@@ -130,7 +126,7 @@ public class BusquedaVueloServiceImpl implements BusquedaVueloService {
                             tramo2.getSalidaProgramada()
                     ).toMinutes();
 
-                    if (minutosEscala >= MIN_TIEMPO_ESCALA_MINUTOS && minutosEscala <= MAX_TIEMPO_ESCALA_MINUTOS) {
+                    if (tramo2.getSalidaProgramada().isAfter(tramo1.getLlegadaProgramada())) {
                         alternativas.add(construirItinerarioConConexion(tramo1, tramo2, minutosEscala));
                     }
                 }
@@ -146,6 +142,14 @@ public class BusquedaVueloServiceImpl implements BusquedaVueloService {
 
     @Override
     public List<ClaseCabinaDisponibilidadResponse> obtenerClasesCabinaDisponibles(Long vueloId) {
+        return obtenerClasesCabinaDisponibles(vueloId, 1);
+    }
+
+    @Override
+    public List<ClaseCabinaDisponibilidadResponse> obtenerClasesCabinaDisponibles(Long vueloId, long asientosNecesarios) {
+        if (asientosNecesarios < 1) {
+            throw new ReglaNegocioException("Debe solicitar al menos una plaza");
+        }
         Vuelo vuelo = vueloRepository.findByIdConDetalles(vueloId)
                 .orElseThrow(() -> new ReglaNegocioException("No se encontró el vuelo con ID: " + vueloId)
                         .conCodigo("VUELO_NO_ENCONTRADO"));
@@ -167,14 +171,14 @@ public class BusquedaVueloServiceImpl implements BusquedaVueloService {
             List<TarifaVuelo> tarifasCabina = entry.getValue();
 
             int capacidadTotal = (int) asientoRepository.contarPorAeronaveYClaseCabina(aeronaveId, cabina);
-            int ocupados = (int) boletoRepository.contarOcupadosPorVueloYClaseCabina(
-                    vueloId,
-                    cabina,
-                    EstadoReserva.CANCELADA
-            );
+            int ocupados = Math.toIntExact(disponibilidadRepository.contarPlazasOcupadas(
+                    vueloId, cabina, LocalDateTime.now(clock)));
 
             int disponibles = capacidadTotal > 0 ? Math.max(0, capacidadTotal - ocupados) : 0;
-            boolean cabinaDisponible = capacidadTotal == 0 || disponibles > 0;
+            boolean cabinaDisponible = ESTADOS_DISPONIBLES.contains(vuelo.getEstado())
+                    && vuelo.getSalidaProgramada().isAfter(LocalDateTime.now(clock))
+                    && Boolean.TRUE.equals(vuelo.getRuta().getActiva())
+                    && disponibles >= asientosNecesarios;
 
             BigDecimal precioDesde = tarifasCabina.stream()
                     .map(TarifaVuelo::getPrecio)

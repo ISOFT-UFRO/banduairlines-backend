@@ -1,12 +1,13 @@
 package com.banduairlines.dto.busqueda;
 
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
-public class SeleccionCotizacionRequest {
+@Getter
+@Setter
+public class SeleccionCotizacionRequest extends PasajerosBusquedaRequest {
 
     // --- Identificadores ---
 
@@ -21,15 +22,4 @@ public class SeleccionCotizacionRequest {
     @NotBlank
     private String claseCabina;
 
-    @NotNull
-    @Min(1)
-    private Integer cantidadAdultos;
-
-    @NotNull
-    @Min(0)
-    private Integer cantidadNinos;
-
-    @NotNull
-    @Min(0)
-    private Integer cantidadBebes;
 }
