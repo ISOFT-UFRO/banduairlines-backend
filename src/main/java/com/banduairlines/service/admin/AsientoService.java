@@ -1,46 +1,22 @@
 package com.banduairlines.service.admin;
 
 import com.banduairlines.model.Asiento;
-import com.banduairlines.model.Avion;
 import com.banduairlines.model.enums.ClaseCabina;
-import com.banduairlines.repository.AsientoRepository;
-import com.banduairlines.repository.AvionRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-@Service
-@RequiredArgsConstructor
-public class AsientoService {
+public interface AsientoService {
 
-    private final AsientoRepository asientoRepository;
-    private final AvionRepository avionRepository;
+    List<Asiento> obtenerAsientosPorAeronave(Long aeronaveId);
 
-    @Transactional(readOnly = true)
-    public List<Asiento> obtenerAsientosPorAeronave(Long aeronaveId) {
-        return asientoRepository.findByAeronaveId(aeronaveId);
-    }
+    List<Asiento> obtenerAsientosPorClase(
+            Long aeronaveId,
+            ClaseCabina claseCabina);
 
-    @Transactional(readOnly = true)
-    public List<Asiento> obtenerAsientosPorClase(Long aeronaveId, ClaseCabina claseCabina) {
-        return asientoRepository.findByAeronaveIdAndClaseCabina(aeronaveId, claseCabina);
-    }
-
-    @Transactional
-    public Asiento crearAsiento(Long aeronaveId, Integer fila, String letra, ClaseCabina claseCabina, Boolean esPreferente) {
-        Avion avion = avionRepository.findById(aeronaveId)
-                .orElseThrow(() -> new RuntimeException("Aeronave no encontrada"));
-
-        Asiento asiento = Asiento.builder()
-                .aeronave(avion)
-                .fila(fila)
-                .letra(letra.toUpperCase())
-                .claseCabina(claseCabina)
-                .esPreferente(esPreferente)
-                .build();
-
-        return asientoRepository.save(asiento);
-    }
+    Asiento crearAsiento(
+            Long aeronaveId,
+            Integer fila,
+            String letra,
+            ClaseCabina claseCabina,
+            Boolean esPreferente);
 }
