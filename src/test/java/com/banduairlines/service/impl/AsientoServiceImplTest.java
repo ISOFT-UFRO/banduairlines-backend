@@ -1,4 +1,4 @@
-package com.banduairlines.service;
+package com.banduairlines.service.impl;
 
 import com.banduairlines.model.Asiento;
 import com.banduairlines.model.Avion;
@@ -21,7 +21,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class AsientoServiceTest {
+class AsientoServiceImplTest {
 
     @Mock
     private AsientoRepository asientoRepository;
@@ -29,7 +29,7 @@ class AsientoServiceTest {
     private AvionRepository avionRepository;
 
     @InjectMocks
-    private AsientoService asientoService;
+    private AsientoServiceImpl asientoService;
 
     private Avion avion;
     private Asiento asiento;
@@ -46,7 +46,7 @@ class AsientoServiceTest {
                 .aeronave(avion)
                 .fila(1)
                 .letra("A")
-                .claseCabina(ClaseCabina.BUSINESS)   // <-- ajustado
+                .claseCabina(ClaseCabina.BUSINESS) // <-- ajustado
                 .esPreferente(true)
                 .build();
     }

@@ -1,4 +1,4 @@
-package com.banduairlines.service;
+package com.banduairlines.service.impl;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -19,10 +19,9 @@ import com.banduairlines.exception.RecursoNoEncontradoException;
 import com.banduairlines.model.Extra;
 import com.banduairlines.model.enums.TipoExtra;
 import com.banduairlines.repository.ExtraRepository;
-import com.banduairlines.service.impl.ExtraServiceImpl;
 
 @ExtendWith(MockitoExtension.class)
-class ExtraServiceTest {
+class ExtraServiceImplTest {
 
     @Mock
     private ExtraRepository extraRepository;
