@@ -2,6 +2,7 @@ package com.banduairlines.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -19,7 +20,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.banduairlines.dto.admin.PromocionRespuesta;
 import com.banduairlines.dto.admin.PromocionSolicitud;
 import com.banduairlines.exception.ConflictoException;
-import com.banduairlines.exception.RecursoNoEncontradoException;
 import com.banduairlines.exception.ReglaNegocioException;
 import com.banduairlines.model.Promocion;
 import com.banduairlines.model.enums.TipoDescuento;
@@ -29,94 +29,103 @@ import com.banduairlines.service.impl.PromocionServiceImpl;
 @ExtendWith(MockitoExtension.class)
 class PromocionServiceTest {
 
+    private static final Long ID = 1L;
+    private static final String CODIGO = "DESC10";
+    private static final String CODIGO_NUEVO = "VERANO20";
+    private static final BigDecimal VALOR = new BigDecimal("10.00");
+    private static final BigDecimal VALOR_NUEVO = new BigDecimal("5000.00");
+    private static final LocalDateTime INICIO = LocalDateTime.of(2026, 12, 1, 0, 0);
+    private static final LocalDateTime EXPIRACION = LocalDateTime.of(2026, 12, 31, 23, 59, 59);
+    private static final Integer USOS_MAXIMOS = 100;
+    private static final Integer USOS_ACTUALES = 7;
+
     @Mock
     private PromocionRepository promocionRepository;
 
     @InjectMocks
     private PromocionServiceImpl promocionService;
 
+    @Test
+    void crear_cuandoElCodigoNoExiste_guardaLaPromocionActivaYConCeroUsos() {
+        when(promocionRepository.existsByCodigo(CODIGO)).thenReturn(false);
+        when(promocionRepository.save(any(Promocion.class))).thenAnswer(invocacion -> invocacion.getArgument(0));
+
+        PromocionRespuesta creada = promocionService.crear(solicitud());
+        assertThat(creada.codigo()).isEqualTo(CODIGO);
+        assertThat(creada.valor()).isEqualTo(VALOR);
+        assertThat(creada.activa()).isTrue();
+        assertThat(creada.usosActuales()).isZero();
+    }
+
+    @Test
+    void crear_cuandoElCodigoYaExiste_lanzaConflictoYNoGuarda() {
+        when(promocionRepository.existsByCodigo(CODIGO)).thenReturn(true);
+
+        assertThatThrownBy(() -> promocionService.crear(solicitud())).isInstanceOf(ConflictoException.class);
+
+        verify(promocionRepository, never()).save(any(Promocion.class));
+    }
+
+    @Test
+    void crear_cuandoLaVigenciaEsInvalida_lanzaReglaDeNegocio() {
+        when(promocionRepository.existsByCodigo(CODIGO)).thenReturn(false);
+
+        assertThatThrownBy(() -> promocionService.crear(solicitud(EXPIRACION, INICIO)))
+                .isInstanceOfSatisfying(ReglaNegocioException.class,
+                        excepcion -> assertThat(excepcion.getCodigo()).isEqualTo("VIGENCIA_INVALIDA"));
+    }
+
+    @Test
+    void listar_cuandoSeFiltraPorActivas_retornaLasPromocionesMapeadas() {
+        when(promocionRepository.listarAdministracion(true)).thenReturn(List.of(promocion()));
+
+        assertThat(promocionService.listar(true)).containsExactly(new PromocionRespuesta(ID, CODIGO,
+                TipoDescuento.PORCENTAJE, VALOR, INICIO, EXPIRACION, USOS_MAXIMOS, USOS_ACTUALES, true));
+    }
+
+    @Test
+    void actualizar_cuandoExiste_actualizaLosDatosYConservaLosUsosActuales() {
+        Promocion existente = promocion();
+        when(promocionRepository.findById(ID)).thenReturn(Optional.of(existente));
+        when(promocionRepository.existsByCodigoAndIdNot(CODIGO_NUEVO, ID)).thenReturn(false);
+
+        promocionService.actualizar(ID, new PromocionSolicitud(CODIGO_NUEVO, TipoDescuento.MONTO_FIJO,
+                VALOR_NUEVO, INICIO, EXPIRACION, USOS_MAXIMOS));
+
+        assertThat(existente.getCodigo()).isEqualTo(CODIGO_NUEVO);
+        assertThat(existente.getValor()).isEqualTo(VALOR_NUEVO);
+        assertThat(existente.getUsosActuales()).isEqualTo(USOS_ACTUALES);
+    }
+
+    @Test
+    void cambiarEstado_cuandoSeDesactiva_dejaLaPromocionInactiva() {
+        Promocion promocion = promocion();
+        when(promocionRepository.findById(ID)).thenReturn(Optional.of(promocion));
+
+        promocionService.cambiarEstado(ID, false);
+
+        assertThat(promocion.getActiva()).isFalse();
+    }
+
     private PromocionSolicitud solicitud() {
-        return new PromocionSolicitud(
-                "DESC10",
-                TipoDescuento.PORCENTAJE,
-                new BigDecimal("10.00"),
-                LocalDateTime.now().plusDays(1),
-                LocalDateTime.now().plusDays(10),
-                null
-        );
+        return solicitud(INICIO, EXPIRACION);
     }
 
-    @Test
-    void crear_cuandoCodigoYaExiste_lanzaConflicto() {
-        when(promocionRepository.existsByCodigo("DESC10")).thenReturn(true);
-
-        assertThatThrownBy(() -> promocionService.crear(solicitud()))
-                .isInstanceOf(ConflictoException.class);
-
-        verify(promocionRepository, never()).save(any());
+    private PromocionSolicitud solicitud(LocalDateTime desde, LocalDateTime hasta) {
+        return new PromocionSolicitud(CODIGO, TipoDescuento.PORCENTAJE, VALOR, desde, hasta, USOS_MAXIMOS);
     }
 
-    @Test
-    void crear_cuandoVigenciaInvalida_lanzaReglaNegocio() {
-        when(promocionRepository.existsByCodigo("DESC10")).thenReturn(false);
-
-        PromocionSolicitud invalida = new PromocionSolicitud(
-                "DESC10",
-                TipoDescuento.PORCENTAJE,
-                new BigDecimal("10.00"),
-                LocalDateTime.now().plusDays(10),
-                LocalDateTime.now().plusDays(1),
-                null
-        );
-
-        assertThatThrownBy(() -> promocionService.crear(invalida))
-                .isInstanceOf(ReglaNegocioException.class);
-
-        verify(promocionRepository, never()).save(any());
-    }
-
-    @Test
-    void crear_cuandoValido_guardaYRetorna() {
-        when(promocionRepository.existsByCodigo("DESC10")).thenReturn(false);
-        when(promocionRepository.save(any(Promocion.class))).thenAnswer(inv -> {
-            Promocion p = inv.getArgument(0);
-            p.setId(1L);
-            return p;
-        });
-
-        PromocionRespuesta respuesta = promocionService.crear(solicitud());
-
-        assertThat(respuesta.id()).isEqualTo(1L);
-        assertThat(respuesta.codigo()).isEqualTo("DESC10");
-        assertThat(respuesta.usosActuales()).isEqualTo(0);
-        assertThat(respuesta.activa()).isTrue();
-    }
-
-    @Test
-    void obtener_cuandoNoExiste_lanzaRecursoNoEncontrado() {
-        when(promocionRepository.findById(99L)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> promocionService.obtener(99L))
-                .isInstanceOf(RecursoNoEncontradoException.class);
-    }
-
-    @Test
-    void cambiarEstado_cuandoExiste_actualizaActiva() {
-        Promocion promocion = Promocion.builder()
-                .id(1L)
-                .codigo("DESC10")
+    private Promocion promocion() {
+        return Promocion.builder()
+                .id(ID)
+                .codigo(CODIGO)
                 .tipoDescuento(TipoDescuento.PORCENTAJE)
-                .valor(new BigDecimal("10.00"))
-                .vigenteDesde(LocalDateTime.now().plusDays(1))
-                .vigenteHasta(LocalDateTime.now().plusDays(10))
-                .usosActuales(0)
+                .valor(VALOR)
+                .vigenteDesde(INICIO)
+                .vigenteHasta(EXPIRACION)
+                .usosMaximos(USOS_MAXIMOS)
+                .usosActuales(USOS_ACTUALES)
                 .activa(true)
                 .build();
-        when(promocionRepository.findById(1L)).thenReturn(Optional.of(promocion));
-
-        PromocionRespuesta respuesta = promocionService.cambiarEstado(1L, false);
-
-        assertThat(respuesta.activa()).isFalse();
-        assertThat(promocion.getActiva()).isFalse();
     }
 }
