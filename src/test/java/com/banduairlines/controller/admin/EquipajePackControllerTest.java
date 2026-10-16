@@ -27,160 +27,150 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(MockitoExtension.class)
 class EquipajePackControllerTest {
 
-    private MockMvc mockMvc;
+        private MockMvc mockMvc;
 
-    @Mock
-    private EquipajePackService servicio;
+        @Mock
+        private EquipajePackService servicio;
 
-    @InjectMocks
-    private EquipajePackController controlador;
+        @InjectMocks
+        private EquipajePackController controlador;
 
-    private final EquipajePackRespuesta respuesta = new EquipajePackRespuesta(
-            1L,
-            "Prueba RF06",
-            true,
-            1,
-            23);
+        private final EquipajePackRespuesta respuesta = new EquipajePackRespuesta(
+                        1L,
+                        "Prueba RF06",
+                        true,
+                        1,
+                        23);
 
-    @BeforeEach
-    void preparar() {
-        mockMvc = MockMvcBuilders.standaloneSetup(controlador)
-                .setControllerAdvice(new GlobalExceptionHandler())
-                .build();
-    }
+        @BeforeEach
+        void preparar() {
+                mockMvc = MockMvcBuilders.standaloneSetup(controlador)
+                                .setControllerAdvice(new GlobalExceptionHandler())
+                                .build();
+        }
 
-    @Test
-    void obtenerDevuelveEquipajeDelPack() throws Exception {
-        when(servicio.obtener(1L)).thenReturn(respuesta);
+        @Test
+        void obtenerDevuelveEquipajeDelPack() throws Exception {
+                when(servicio.obtener(1L)).thenReturn(respuesta);
 
-        mockMvc.perform(get("/api/v1/admin/packs/1/equipaje"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.packId").value(1))
-                .andExpect(jsonPath("$.nombrePack").value("Prueba RF06"))
-                .andExpect(jsonPath("$.incluyeEquipajeCabina").value(true))
-                .andExpect(jsonPath("$.piezasBodegaIncluidas").value(1))
-                .andExpect(jsonPath("$.kgPorPiezaBodega").value(23));
+                mockMvc.perform(get("/api/v1/admin/packs/1/equipaje"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.packId").value(1))
+                                .andExpect(jsonPath("$.nombrePack").value("Prueba RF06"))
+                                .andExpect(jsonPath("$.incluyeEquipajeCabina").value(true))
+                                .andExpect(jsonPath("$.piezasBodegaIncluidas").value(1))
+                                .andExpect(jsonPath("$.kgPorPiezaBodega").value(23));
 
-        verify(servicio).obtener(1L);
-    }
+                verify(servicio).obtener(1L);
+        }
 
-    @Test
-    void actualizarRecibeElJsonYDevuelveEquipaje() throws Exception {
-        EquipajePackSolicitud solicitud = new EquipajePackSolicitud(
-                true,
-                1,
-                23);
+        @Test
+        void actualizarRecibeElJsonYDevuelveEquipaje() throws Exception {
+                EquipajePackSolicitud solicitud = new EquipajePackSolicitud(
+                                true,
+                                1,
+                                23);
 
-        when(servicio.actualizar(1L, solicitud))
-                .thenReturn(respuesta);
+                when(servicio.actualizar(1L, solicitud))
+                                .thenReturn(respuesta);
 
-        mockMvc.perform(put("/api/v1/admin/packs/1/equipaje")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                        {
-                            "incluyeEquipajeCabina": true,
-                            "piezasBodegaIncluidas": 1,
-                            "kgPorPiezaBodega": 23
-                        }
-                        """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.packId").value(1))
-                .andExpect(jsonPath("$.incluyeEquipajeCabina").value(true))
-                .andExpect(jsonPath("$.piezasBodegaIncluidas").value(1))
-                .andExpect(jsonPath("$.kgPorPiezaBodega").value(23));
+                mockMvc.perform(put("/api/v1/admin/packs/1/equipaje")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {
+                                                    "incluyeEquipajeCabina": true,
+                                                    "piezasBodegaIncluidas": 1,
+                                                    "kgPorPiezaBodega": 23
+                                                }
+                                                """))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.packId").value(1))
+                                .andExpect(jsonPath("$.incluyeEquipajeCabina").value(true))
+                                .andExpect(jsonPath("$.piezasBodegaIncluidas").value(1))
+                                .andExpect(jsonPath("$.kgPorPiezaBodega").value(23));
 
-        verify(servicio).actualizar(1L, solicitud);
-    }
+                verify(servicio).actualizar(1L, solicitud);
+        }
 
-    @Test
-    void actualizarRechazaCamposObligatoriosAusentes()
-            throws Exception {
+        @Test
+        void actualizarRechazaCamposObligatoriosAusentes()
+                        throws Exception {
 
-        mockMvc.perform(put("/api/v1/admin/packs/1/equipaje")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDACION"))
-                .andExpect(jsonPath("$.details.length()").value(3));
+                mockMvc.perform(put("/api/v1/admin/packs/1/equipaje")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{}"))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.code").value("VALIDACION"))
+                                .andExpect(jsonPath("$.details.length()").value(3));
 
-        verifyNoInteractions(servicio);
-    }
+                verifyNoInteractions(servicio);
+        }
 
-    @Test
-    void actualizarDevuelveErrorPorEquipajeIncoherente()
-            throws Exception {
+        @Test
+        void actualizarDevuelveErrorPorEquipajeIncoherente()
+                        throws Exception {
 
-        EquipajePackSolicitud solicitud = new EquipajePackSolicitud(
-                true, 0, 23);
+                EquipajePackSolicitud solicitud = new EquipajePackSolicitud(
+                                true, 0, 23);
 
-        when(servicio.actualizar(1L, solicitud))
-                .thenThrow(
-                        new ReglaNegocioException(
-                                "Sin piezas de bodega, el peso debe ser cero")
-                                .conCodigo("EQUIPAJE_BODEGA_INCOHERENTE"));
+                when(servicio.actualizar(1L, solicitud))
+                                .thenThrow(
+                                                new ReglaNegocioException(
+                                                                "Sin piezas de bodega, el peso debe ser cero")
+                                                                .conCodigo("EQUIPAJE_BODEGA_INCOHERENTE"));
 
-        mockMvc.perform(put("/api/v1/admin/packs/1/equipaje")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                        {
-                            "incluyeEquipajeCabina": true,
-                            "piezasBodegaIncluidas": 0,
-                            "kgPorPiezaBodega": 23
-                        }
-                        """))
-                .andExpect(status().is(422))
-                .andExpect(jsonPath("$.code")
-                        .value("EQUIPAJE_BODEGA_INCOHERENTE"));
+                mockMvc.perform(put("/api/v1/admin/packs/1/equipaje")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {
+                                                    "incluyeEquipajeCabina": true,
+                                                    "piezasBodegaIncluidas": 0,
+                                                    "kgPorPiezaBodega": 23
+                                                }
+                                                """))
+                                .andExpect(status().is(422))
+                                .andExpect(jsonPath("$.code")
+                                                .value("EQUIPAJE_BODEGA_INCOHERENTE"));
 
-        verify(servicio).actualizar(1L, solicitud);
-    }
+                verify(servicio).actualizar(1L, solicitud);
+        }
 
-    @Test
-    void obtenerDevuelveErrorSiElPackNoExiste() throws Exception {
-        when(servicio.obtener(999L))
-                .thenThrow(
-                        new RecursoNoEncontradoException("Pack tarifario", 999L));
+        @Test
+        void obtenerDevuelveErrorSiElPackNoExiste() throws Exception {
+                when(servicio.obtener(999L))
+                                .thenThrow(
+                                                new RecursoNoEncontradoException("Pack tarifario", 999L));
 
-        mockMvc.perform(get("/api/v1/admin/packs/999/equipaje"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code")
-                        .value("RECURSO_NO_ENCONTRADO"));
+                mockMvc.perform(get("/api/v1/admin/packs/999/equipaje"))
+                                .andExpect(status().isNotFound())
+                                .andExpect(jsonPath("$.code")
+                                                .value("RECURSO_NO_ENCONTRADO"));
 
-        verify(servicio).obtener(999L);
-    }
+                verify(servicio).obtener(999L);
+        }
 
-    @ParameterizedTest
-    @CsvSource({
-            "-1, 23",
-            "1, -1"
-    })
-    void actualizarRechazaCantidadesOPesosNegativos(
-            int piezas, int kilos) throws Exception {
+        @ParameterizedTest
+        @CsvSource({
+                        "-1, 23",
+                        "1, -1"
+        })
+        void actualizarRechazaValoresNegativos(int piezas, int kilos)
+                        throws Exception {
 
-    }
+                String cuerpo = """
+                                {
+                                    "incluyeEquipajeCabina": true,
+                                    "piezasBodegaIncluidas": %d,
+                                    "kgPorPiezaBodega": %d
+                                }
+                                """.formatted(piezas, kilos);
 
-    @ParameterizedTest
-    @CsvSource({
-            "-1, 23",
-            "1, -1"
-    })
-    void actualizarRechazaValoresNegativos(int piezas, int kilos)
-            throws Exception {
+                mockMvc.perform(put("/api/v1/admin/packs/1/equipaje")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(cuerpo))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.code").value("VALIDACION"));
 
-        String cuerpo = """
-                {
-                    "incluyeEquipajeCabina": true,
-                    "piezasBodegaIncluidas": %d,
-                    "kgPorPiezaBodega": %d
-                }
-                """.formatted(piezas, kilos);
-
-        mockMvc.perform(put("/api/v1/admin/packs/1/equipaje")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(cuerpo))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDACION"));
-
-        verifyNoInteractions(servicio);
-    }
+                verifyNoInteractions(servicio);
+        }
 }
