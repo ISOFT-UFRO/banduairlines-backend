@@ -12,6 +12,13 @@ public interface CobroReservaService {
 
     CobroIniciado iniciarCobro(Reserva reserva, long montoCLP, String correo);
 
+    /**
+     * true si PAGOS ya registró al menos un cobro para la reserva, en cualquier estado
+     * (pendiente, pagado o rechazado). RESERVA lo usa para saber si la compra sigue en curso:
+     * una reserva PENDIENTE_PAGO sin cobros todavía se puede modificar.
+     */
+    boolean tieneCobroIniciado(Long reservaId);
+
     record CobroIniciado(String pagoId, String urlPago) {
     }
 }

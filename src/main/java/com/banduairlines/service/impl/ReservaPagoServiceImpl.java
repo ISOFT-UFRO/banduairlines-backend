@@ -93,8 +93,9 @@ public class ReservaPagoServiceImpl implements ReservaPagoService {
         if (reserva.getCodigoReserva() == null || reserva.getCodigoReserva().isBlank()) {
             reserva.setCodigoReserva(generarCodigoReserva());
         }
-        if (reserva.getEstado() == EstadoReserva.EN_CURSO) {
-            reserva.setEstado(EstadoReserva.PENDIENTE_PAGO);
+        if (!cobroReservaService.tieneCobroIniciado(reserva.getId())) {
+            // Primer intento de pago: la compra deja de estar en curso y el bloqueo se renueva una sola vez.
+            // Un reintento tras un rechazo conserva el mismo expiraEn.
             reserva.setExpiraEn(reservaAcceso.ahora().plusMinutes(minutosBloqueo));
         }
         reservaRepository.save(reserva);
@@ -138,7 +139,7 @@ public class ReservaPagoServiceImpl implements ReservaPagoService {
 
     /** Estados de otras reservas que mantienen un asiento tomado. */
     private static List<EstadoReserva> ocupantes() {
-        return List.of(EstadoReserva.EN_CURSO, EstadoReserva.PENDIENTE_PAGO, EstadoReserva.CONFIRMADA);
+        return List.of(EstadoReserva.PENDIENTE_PAGO, EstadoReserva.CONFIRMADA);
     }
 
     /** Guarda en la reserva los precios vigentes con que se va a cobrar. */

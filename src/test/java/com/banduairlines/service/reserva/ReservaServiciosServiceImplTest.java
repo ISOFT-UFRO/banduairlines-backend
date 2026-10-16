@@ -50,7 +50,7 @@ class ReservaServiciosServiceImplTest {
     void setUp() {
         service = new ReservaServiciosServiceImpl(reservaAcceso, reservaRepository, boletoRepository,
                 extraRepository, new CalculadoraTotalReserva());
-        reserva = ReservaFixtures.reserva(EstadoReserva.EN_CURSO);
+        reserva = ReservaFixtures.reserva(EstadoReserva.PENDIENTE_PAGO);
         boleto = ReservaFixtures.boleto(reserva, 1, 10, 59990, ReservaFixtures.packLight());
         when(reservaAcceso.obtenerAutorizada(1L, "tok")).thenReturn(reserva);
         when(boletoRepository.findByReserva_IdOrderByOrdenTramoAscIdAsc(1L)).thenReturn(List.of(boleto));

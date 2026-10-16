@@ -19,7 +19,7 @@ class CalculadoraTotalReservaTest {
 
     @Test
     void calcular_sumaTarifasYExtrasPorConcepto() {
-        Reserva reserva = ReservaFixtures.reserva(EstadoReserva.EN_CURSO);
+        Reserva reserva = ReservaFixtures.reserva(EstadoReserva.PENDIENTE_PAGO);
         Boleto b1 = ReservaFixtures.boleto(reserva, 1, 10, 59990, ReservaFixtures.packLight());
         Boleto b2 = ReservaFixtures.boleto(reserva, 2, 10, 59990, ReservaFixtures.packLight());
         b1.addExtra(ReservaFixtures.extra(1, TipoExtra.EQUIPAJE_BODEGA, 24990), 2, BigDecimal.valueOf(24990));
@@ -37,7 +37,7 @@ class CalculadoraTotalReservaTest {
 
     @Test
     void calcular_conPorcentaje_truncaAlPesoYAgregaLineaNegativa() {
-        Reserva reserva = ReservaFixtures.reserva(EstadoReserva.EN_CURSO);
+        Reserva reserva = ReservaFixtures.reserva(EstadoReserva.PENDIENTE_PAGO);
         Boleto b = ReservaFixtures.boleto(reserva, 1, 10, 187985, ReservaFixtures.packLight());
 
         CalculadoraTotalReserva.Resultado r = calculadora.calcular(List.of(b),
@@ -57,7 +57,7 @@ class CalculadoraTotalReservaTest {
 
     @Test
     void calcular_preciosVigentes_usaLaTarifaYElCatalogoActuales() {
-        Reserva reserva = ReservaFixtures.reserva(EstadoReserva.EN_CURSO);
+        Reserva reserva = ReservaFixtures.reserva(EstadoReserva.PENDIENTE_PAGO);
         Boleto b = ReservaFixtures.boleto(reserva, 1, 10, 50000, ReservaFixtures.packLight());
         b.getTarifaVueloId().setPrecio(BigDecimal.valueOf(55000));
         b.addExtra(ReservaFixtures.extra(1, TipoExtra.EQUIPAJE_BODEGA, 26000), 1, BigDecimal.valueOf(24990));
