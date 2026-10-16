@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Component;
 
-
+//endpoint 13
 //Clave compartida entre módulos para las rutas /internas (cabecera X-Service-Key).
 //Si app.internal.service-key no está configurada, ninguna petición HTTP pasa.
 
@@ -20,7 +20,7 @@ public class ClaveServicioInterna {
         this.clave = clave;
     }
 
-    /** Lanza BadCredentialsException (401 NO_AUTENTICADO) si la clave falta o no coincide. */
+    // Lanza BadCredentialsException (401 NO_AUTENTICADO) si la contraseña falta o no coincide
     public void exigir(String claveRecibida) {
         boolean valida = !clave.isBlank()
                 && claveRecibida != null
