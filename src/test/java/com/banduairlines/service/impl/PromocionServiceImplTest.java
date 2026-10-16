@@ -1,4 +1,4 @@
-package com.banduairlines.service;
+package com.banduairlines.service.impl;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -24,10 +24,9 @@ import com.banduairlines.exception.ReglaNegocioException;
 import com.banduairlines.model.Promocion;
 import com.banduairlines.model.enums.TipoDescuento;
 import com.banduairlines.repository.PromocionRepository;
-import com.banduairlines.service.impl.PromocionServiceImpl;
 
 @ExtendWith(MockitoExtension.class)
-class PromocionServiceTest {
+class PromocionServiceImplTest {
 
     private static final Long ID = 1L;
     private static final String CODIGO = "DESC10";

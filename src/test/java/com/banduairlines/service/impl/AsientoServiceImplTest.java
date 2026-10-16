@@ -1,4 +1,4 @@
-package com.banduairlines.service;
+package com.banduairlines.service.impl;
 
 import com.banduairlines.model.Asiento;
 import com.banduairlines.model.Avion;
@@ -18,7 +18,6 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import com.banduairlines.service.impl.AsientoServiceImpl;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
