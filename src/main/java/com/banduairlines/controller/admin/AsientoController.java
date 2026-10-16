@@ -2,7 +2,7 @@ package com.banduairlines.controller.admin;
 
 import com.banduairlines.model.Asiento;
 import com.banduairlines.model.enums.ClaseCabina;
-import com.banduairlines.service.AsientoService;
+import com.banduairlines.service.admin.AsientoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

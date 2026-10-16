@@ -1,4 +1,4 @@
-package com.banduairlines.service;
+package com.banduairlines.service.admin;
 
 import com.banduairlines.model.Asiento;
 import com.banduairlines.model.Avion;
