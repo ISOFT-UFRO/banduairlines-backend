@@ -12,7 +12,6 @@ import com.banduairlines.exception.ServicioExternoException;
 import com.banduairlines.exception.ValidacionException;
 import com.banduairlines.model.Usuario;
 import com.banduairlines.model.enums.RolUsuario;
-import com.banduairlines.repository.SolicitudCambioCorreoRepository;
 import com.banduairlines.repository.UsuarioRepository;
 import com.banduairlines.security.UsuarioActual;
 import com.banduairlines.service.cuenta.CambioCorreoService;
@@ -29,25 +28,29 @@ import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class CambioCorreoServiceImpl implements CambioCorreoService {
 
     private final UsuarioRepository usuarioRepository;
-    private final SolicitudCambioCorreoRepository solicitudRepository;
     private final UsuarioActual usuarioActual;
     private final PasswordEncoder passwordEncoder;
     private final Optional<ServicioCorreo> servicioCorreo;
     private final Clock clock;
     private final long minutosExpiracion;
     private final SecureRandom secureRandom = new SecureRandom();
+    private final AtomicLong secuenciaSolicitudes = new AtomicLong();
+    private final ConcurrentMap<Long, SolicitudPendiente> solicitudes =
+            new ConcurrentHashMap<>();
+    private final Object monitorSolicitudes = new Object();
 
     public CambioCorreoServiceImpl(
             UsuarioRepository usuarioRepository,
-            SolicitudCambioCorreoRepository solicitudRepository,
             UsuarioActual usuarioActual,
             PasswordEncoder passwordEncoder,
             Optional<ServicioCorreo> servicioCorreo,
@@ -59,7 +62,6 @@ public class CambioCorreoServiceImpl implements CambioCorreoService {
             throw new IllegalArgumentException("La expiracion del codigo debe ser positiva");
         }
         this.usuarioRepository = usuarioRepository;
-        this.solicitudRepository = solicitudRepository;
         this.usuarioActual = usuarioActual;
         this.passwordEncoder = passwordEncoder;
         this.servicioCorreo = servicioCorreo;
@@ -81,27 +83,26 @@ public class CambioCorreoServiceImpl implements CambioCorreoService {
         validarCorreoDisponible(nuevoCorreo, usuario.getId());
 
         Instant ahora = clock.instant();
-        invalidarSolicitudesAnteriores(usuario.getId(), ahora);
-
         String codigo = generarCodigo();
         Instant expiracion = ahora.plus(minutosExpiracion, ChronoUnit.MINUTES);
-
-        com.banduairlines.persistence.cuenta.SolicitudCambioCorreoEntity entidad =
-                com.banduairlines.persistence.cuenta.SolicitudCambioCorreoEntity.builder()
-                        .usuario(usuario)
-                        .nuevoCorreo(nuevoCorreo)
-                        .codigoHash(passwordEncoder.encode(codigo))
-                        .fechaCreacion(ahora)
-                        .fechaExpiracion(expiracion)
-                        .build();
-
-        com.banduairlines.persistence.cuenta.SolicitudCambioCorreoEntity guardada =
-                solicitudRepository.saveAndFlush(entidad);
-
         enviarCodigo(nuevoCorreo, codigo, expiracion);
 
+        SolicitudPendiente guardada;
+        synchronized (monitorSolicitudes) {
+            invalidarSolicitudesAnteriores(usuario.getId(), ahora);
+            Long idSolicitud = secuenciaSolicitudes.incrementAndGet();
+            guardada = new SolicitudPendiente(
+                    idSolicitud,
+                    usuario.getId(),
+                    nuevoCorreo,
+                    passwordEncoder.encode(codigo),
+                    expiracion
+            );
+            solicitudes.put(idSolicitud, guardada);
+        }
+
         return new RespuestaSolicitudCambioCorreo(
-                guardada.getIdSolicitud(),
+                guardada.idSolicitud,
                 enmascararCorreo(nuevoCorreo),
                 expiracion
         );
@@ -114,34 +115,34 @@ public class CambioCorreoServiceImpl implements CambioCorreoService {
             ConfirmacionCambioCorreo confirmacion
     ) {
         Usuario usuario = obtenerUsuarioActual();
-        com.banduairlines.persistence.cuenta.SolicitudCambioCorreoEntity solicitud =
-                buscarSolicitud(idSolicitud, usuario.getId());
+        SolicitudPendiente solicitud = buscarSolicitud(idSolicitud, usuario.getId());
         Instant ahora = clock.instant();
 
-        if (!solicitud.puedeUtilizarse()) {
-            throw codigoIncorrecto("La solicitud ya fue finalizada");
-        }
-        if (solicitud.estaVencida(ahora)) {
-            throw new RecursoVencidoException(
-                    CodigosError.CODIGO_VENCIDO,
-                    "El codigo de verificacion ha vencido"
-            );
-        }
-        if (!passwordEncoder.matches(confirmacion.codigo(), solicitud.getCodigoHash())) {
-            throw codigoIncorrecto("El codigo de verificacion es incorrecto");
-        }
+        synchronized (solicitud) {
+            if (!solicitud.puedeUtilizarse()) {
+                throw codigoIncorrecto("La solicitud ya fue finalizada");
+            }
+            if (solicitud.estaVencida(ahora)) {
+                throw new RecursoVencidoException(
+                        CodigosError.CODIGO_VENCIDO,
+                        "El codigo de verificacion ha vencido"
+                );
+            }
+            if (!passwordEncoder.matches(confirmacion.codigo(), solicitud.codigoHash)) {
+                throw codigoIncorrecto("El codigo de verificacion es incorrecto");
+            }
 
-        validarCorreoDisponible(solicitud.getNuevoCorreo(), usuario.getId());
+            validarCorreoDisponible(solicitud.nuevoCorreo, usuario.getId());
+            usuario.setEmail(solicitud.nuevoCorreo);
 
-        usuario.setEmail(solicitud.getNuevoCorreo());
-        solicitud.setFechaConfirmacion(ahora);
-        solicitud.setCodigoHash(null);
+            try {
+                usuarioRepository.saveAndFlush(usuario);
+            } catch (DataIntegrityViolationException ex) {
+                throw correoYaRegistrado();
+            }
 
-        try {
-            usuarioRepository.saveAndFlush(usuario);
-            solicitudRepository.save(solicitud);
-        } catch (DataIntegrityViolationException ex) {
-            throw correoYaRegistrado();
+            solicitud.fechaConfirmacion = ahora;
+            solicitud.codigoHash = null;
         }
 
         return MapeadorUsuario.aRespuesta(usuario);
@@ -151,16 +152,16 @@ public class CambioCorreoServiceImpl implements CambioCorreoService {
     @Transactional
     public void cancelar(Long idSolicitud) {
         Usuario usuario = obtenerUsuarioActual();
-        com.banduairlines.persistence.cuenta.SolicitudCambioCorreoEntity solicitud =
-                buscarSolicitud(idSolicitud, usuario.getId());
+        SolicitudPendiente solicitud = buscarSolicitud(idSolicitud, usuario.getId());
 
-        if (solicitud.fueCancelada() || solicitud.fueConfirmada()) {
-            return;
+        synchronized (solicitud) {
+            if (solicitud.fueCancelada() || solicitud.fueConfirmada()) {
+                return;
+            }
+
+            solicitud.fechaCancelacion = clock.instant();
+            solicitud.codigoHash = null;
         }
-
-        solicitud.setFechaCancelacion(clock.instant());
-        solicitud.setCodigoHash(null);
-        solicitudRepository.save(solicitud);
     }
 
     private Usuario obtenerUsuarioActual() {
@@ -177,29 +178,28 @@ public class CambioCorreoServiceImpl implements CambioCorreoService {
         return usuario;
     }
 
-    private com.banduairlines.persistence.cuenta.SolicitudCambioCorreoEntity buscarSolicitud(
+    private SolicitudPendiente buscarSolicitud(
             Long idSolicitud,
             Long idUsuario
     ) {
-        return solicitudRepository
-                .findByIdSolicitudAndUsuario_Id(idSolicitud, idUsuario)
-                .orElseThrow(() -> new RecursoNoEncontradoException(
-                        "La solicitud de cambio de correo no existe"
-                ).conCodigo(CodigosError.SOLICITUD_NO_ENCONTRADA));
+        SolicitudPendiente solicitud = solicitudes.get(idSolicitud);
+        if (solicitud == null || !solicitud.idUsuario.equals(idUsuario)) {
+            throw new RecursoNoEncontradoException(
+                    "La solicitud de cambio de correo no existe"
+            ).conCodigo(CodigosError.SOLICITUD_NO_ENCONTRADA);
+        }
+        return solicitud;
     }
 
     private void invalidarSolicitudesAnteriores(Long idUsuario, Instant ahora) {
-        List<com.banduairlines.persistence.cuenta.SolicitudCambioCorreoEntity> anteriores =
-                solicitudRepository
-                .findByUsuario_IdAndFechaConfirmacionIsNullAndFechaCancelacionIsNull(
-                                idUsuario
-                        );
-
-        anteriores.forEach(anterior -> {
-            anterior.setFechaCancelacion(ahora);
-            anterior.setCodigoHash(null);
+        solicitudes.values().forEach(anterior -> {
+            synchronized (anterior) {
+                if (anterior.idUsuario.equals(idUsuario) && anterior.puedeUtilizarse()) {
+                    anterior.fechaCancelacion = ahora;
+                    anterior.codigoHash = null;
+                }
+            }
         });
-        solicitudRepository.saveAll(anteriores);
     }
 
     private void validarCorreoDisponible(String correo, Long idUsuarioActual) {
@@ -248,5 +248,46 @@ public class CambioCorreoServiceImpl implements CambioCorreoService {
     private ReglaNegocioException codigoIncorrecto(String mensaje) {
         return new ReglaNegocioException(mensaje)
                 .conCodigo(CodigosError.CODIGO_INCORRECTO);
+    }
+
+    private static final class SolicitudPendiente {
+
+        private final Long idSolicitud;
+        private final Long idUsuario;
+        private final String nuevoCorreo;
+        private String codigoHash;
+        private final Instant fechaExpiracion;
+        private Instant fechaConfirmacion;
+        private Instant fechaCancelacion;
+
+        private SolicitudPendiente(
+                Long idSolicitud,
+                Long idUsuario,
+                String nuevoCorreo,
+                String codigoHash,
+                Instant fechaExpiracion
+        ) {
+            this.idSolicitud = idSolicitud;
+            this.idUsuario = idUsuario;
+            this.nuevoCorreo = nuevoCorreo;
+            this.codigoHash = codigoHash;
+            this.fechaExpiracion = fechaExpiracion;
+        }
+
+        private boolean estaVencida(Instant ahora) {
+            return !fechaExpiracion.isAfter(ahora);
+        }
+
+        private boolean fueConfirmada() {
+            return fechaConfirmacion != null;
+        }
+
+        private boolean fueCancelada() {
+            return fechaCancelacion != null;
+        }
+
+        private boolean puedeUtilizarse() {
+            return !fueConfirmada() && !fueCancelada() && codigoHash != null;
+        }
     }
 }
