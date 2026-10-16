@@ -1,27 +1,20 @@
 package com.banduairlines.dto.tracking;
 
-import com.banduairlines.model.enums.EstadoVuelo;
 import jakarta.validation.constraints.NotNull;
-import lombok.Getter;
-import lombok.Setter;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 
-@Getter
-@Setter
-public class ActualizarEstadoRequest {
+import com.banduairlines.model.enums.EstadoVuelo;
 
-    @NotNull(message = "El nuevo estado es obligatorio")
-    private EstadoVuelo nuevoEstado;
+// La obligatoriedad del motivo la valida el dominio (422 MOTIVO_REQUERIDO).
+public record ActualizarEstadoRequest(
+        @NotNull(message = "el nuevo estado es obligatorio")
+        EstadoVuelo nuevoEstado,
 
-    private String motivo;
+        @Size(max = 500, message = "el motivo no puede superar los 500 caracteres")
+        String motivo,
 
-    private Integer retrasoMinutos;
-
-    public ActualizarEstadoRequest() {
-    }
-
-    public ActualizarEstadoRequest(EstadoVuelo nuevoEstado, String motivo, Integer retrasoMinutos) {
-        this.nuevoEstado = nuevoEstado;
-        this.motivo = motivo;
-        this.retrasoMinutos = retrasoMinutos;
-    }
+        @Positive(message = "los minutos de retraso deben ser mayores a cero")
+        Integer retrasoMinutos
+) {
 }
