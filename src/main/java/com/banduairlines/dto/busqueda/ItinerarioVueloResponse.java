@@ -5,7 +5,7 @@ import lombok.Builder;
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Builder
+@Builder(toBuilder = true)
 public record ItinerarioVueloResponse(
         String tipoItinerario,
         int cantidadEscalas,
@@ -15,5 +15,6 @@ public record ItinerarioVueloResponse(
         LocalDateTime horarioSalida,
         LocalDateTime horarioLlegada,
         long duracionTotalMinutos,
-        List<TramoVueloResponse> tramos
+        List<TramoVueloResponse> tramos,
+        List<TarifaItinerarioResponse> tarifas
 ) {}
