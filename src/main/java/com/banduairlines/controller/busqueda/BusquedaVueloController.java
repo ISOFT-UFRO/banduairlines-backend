@@ -1,10 +1,14 @@
 package com.banduairlines.controller.busqueda;
 
+import com.banduairlines.dto.busqueda.BusquedaItinerarioRequest;
 import com.banduairlines.dto.busqueda.ClaseCabinaDisponibilidadResponse;
 import com.banduairlines.dto.busqueda.ItinerarioVueloResponse;
+import com.banduairlines.dto.busqueda.PasajerosBusquedaRequest;
 import com.banduairlines.dto.busqueda.ProgramacionVueloRequest;
 import com.banduairlines.dto.busqueda.ProgramacionVueloResponse;
 import com.banduairlines.service.busqueda.BusquedaVueloService;
+import com.banduairlines.service.busqueda.ItinerarioBusquedaService;
+import com.banduairlines.service.busqueda.PasajerosBusquedaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -18,15 +22,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -36,9 +39,15 @@ import java.util.List;
 public class BusquedaVueloController {
 
     private final BusquedaVueloService busquedaVueloService;
+    private final ItinerarioBusquedaService itinerarioBusquedaService;
+    private final PasajerosBusquedaService pasajerosBusquedaService;
 
-    public BusquedaVueloController(BusquedaVueloService busquedaVueloService) {
+    public BusquedaVueloController(BusquedaVueloService busquedaVueloService,
+                                  ItinerarioBusquedaService itinerarioBusquedaService,
+                                  PasajerosBusquedaService pasajerosBusquedaService) {
         this.busquedaVueloService = busquedaVueloService;
+        this.itinerarioBusquedaService = itinerarioBusquedaService;
+        this.pasajerosBusquedaService = pasajerosBusquedaService;
     }
 
     @GetMapping("/itinerarios")
@@ -47,22 +56,9 @@ public class BusquedaVueloController {
             description = "Permite visualizar alternativas de vuelo directas y con una conexión (escala), indicando horarios y tramos involucrados."
     )
     public ResponseEntity<List<ItinerarioVueloResponse>> buscarItinerarios(
-            @RequestParam @NotBlank(message = "El origen es obligatorio")
-            @Size(min = 3, max = 3, message = "El código IATA de origen debe tener exactamente 3 caracteres") String origen,
-
-            @RequestParam @NotBlank(message = "El destino es obligatorio")
-            @Size(min = 3, max = 3, message = "El código IATA de destino debe tener exactamente 3 caracteres") String destino,
-
-            @RequestParam @NotNull(message = "La fecha de salida es obligatoria")
-            @FutureOrPresent(message = "La fecha de salida debe ser hoy o una fecha futura")
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha
+            @Valid @ModelAttribute BusquedaItinerarioRequest request
     ) {
-        List<ItinerarioVueloResponse> itinerarios = busquedaVueloService.obtenerAlternativasItinerario(
-                origen,
-                destino,
-                fecha
-        );
-        return ResponseEntity.ok(itinerarios);
+        return ResponseEntity.ok(itinerarioBusquedaService.buscar(request).itinerarios());
     }
 
     @GetMapping("/vuelos/{idVuelo}/disponibilidad")
@@ -71,9 +67,12 @@ public class BusquedaVueloController {
             description = "Permite visualizar, para una alternativa de vuelo específica, las clases de cabina disponibles junto con sus cupos, packs y precio base."
     )
     public ResponseEntity<List<ClaseCabinaDisponibilidadResponse>> obtenerDisponibilidadCabinas(
-            @PathVariable @Positive(message = "El ID del vuelo debe ser un número positivo") Long idVuelo
+            @PathVariable @Positive(message = "El ID del vuelo debe ser un número positivo") Long idVuelo,
+            @Valid @ModelAttribute PasajerosBusquedaRequest request
     ) {
-        List<ClaseCabinaDisponibilidadResponse> cabinas = busquedaVueloService.obtenerClasesCabinaDisponibles(idVuelo);
+        var pasajeros = pasajerosBusquedaService.validarYResumir(request);
+        List<ClaseCabinaDisponibilidadResponse> cabinas = busquedaVueloService.obtenerClasesCabinaDisponibles(
+                idVuelo, pasajeros.asientosNecesarios());
         return ResponseEntity.ok(cabinas);
     }
 

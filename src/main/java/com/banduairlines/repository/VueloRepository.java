@@ -64,7 +64,7 @@ public interface VueloRepository extends JpaRepository<Vuelo, Long> {
             WHERE UPPER(d.codigoIata) = UPPER(:destinoIata)
               AND UPPER(o.codigoIata) <> UPPER(:origenIata)
               AND v.salidaProgramada >= :desdeSalida
-              AND v.salidaProgramada <= :hastaSalida
+              AND v.salidaProgramada <= COALESCE(:hastaSalida, v.salidaProgramada)
               AND v.estado IN :estados
             ORDER BY v.salidaProgramada ASC
             """)
