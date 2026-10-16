@@ -11,6 +11,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.banduairlines.exception.ReglaNegocioException;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import com.banduairlines.exception.RecursoNoEncontradoException;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -110,6 +111,35 @@ class EquipajePackServiceImplTest {
         assertThat(pack.getIncluyeEquipajeCabina()).isFalse();
         assertThat(pack.getPiezasBodegaIncluidas()).isEqualTo(1);
         assertThat(pack.getKgPorPiezaBodega()).isEqualTo(23);
+
+        verify(packs, never()).saveAndFlush(any(PackTarifario.class));
+    }
+
+    @Test
+    void obtenerRechazaPackInexistente() {
+        when(packs.findById(999L))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> servicio.obtener(999L))
+                .isInstanceOf(RecursoNoEncontradoException.class)
+                .hasMessage("Pack tarifario no encontrado: 999");
+
+        verify(packs, never()).saveAndFlush(any(PackTarifario.class));
+    }
+
+    @Test
+    void actualizarRechazaPackInexistente() {
+        when(packs.findById(999L))
+                .thenReturn(Optional.empty());
+
+        EquipajePackSolicitud solicitud = new EquipajePackSolicitud(
+                true,
+                1,
+                23);
+
+        assertThatThrownBy(() -> servicio.actualizar(999L, solicitud))
+                .isInstanceOf(RecursoNoEncontradoException.class)
+                .hasMessage("Pack tarifario no encontrado: 999");
 
         verify(packs, never()).saveAndFlush(any(PackTarifario.class));
     }
