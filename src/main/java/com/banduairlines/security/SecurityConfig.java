@@ -3,6 +3,7 @@ package com.banduairlines.security;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -54,20 +55,46 @@ public class SecurityConfig {
                     auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll();      // preflight de CORS
                     auth.requestMatchers(SecurityRoutes.PUBLICAS).permitAll();
                     auth.requestMatchers(HttpMethod.GET, SecurityRoutes.PUBLICAS_GET).permitAll();
-                    if (securityEnabled) {
+                    auth.requestMatchers(HttpMethod.POST, SecurityRoutes.AUTH_PUBLICAS_POST).permitAll();
+                    auth.requestMatchers(HttpMethod.GET, SecurityRoutes.AUTH_CODIGOS_RECUPERACION).permitAll();
+                    auth.requestMatchers(HttpMethod.PUT, SecurityRoutes.AUTH_CODIGOS_RECUPERACION).permitAll();
+
+                    if (!securityEnabled) {
+                        auth.anyRequest().permitAll();
+                    } else {
+
+                        auth.requestMatchers(HttpMethod.POST, SecurityRoutes.AUTH_CIERRE_SESION).authenticated();
+                        auth.requestMatchers(SecurityRoutes.SOLO_SUPERADMIN).hasAuthority("ROLE_SUPERADMIN");
+                        auth.requestMatchers(SecurityRoutes.SOLO_PASAJERO).hasRole("PASAJERO");
+                        auth.requestMatchers(SecurityRoutes.CUENTA_ACTUAL).hasAnyRole("PASAJERO", "ADMINISTRADOR");
                         auth.requestMatchers(SecurityRoutes.SOLO_ADMIN).hasRole("ADMINISTRADOR");
                         auth.anyRequest().authenticated();
-                    } else {
-                        auth.anyRequest().permitAll();                                 // solo desarrollo
                     }
-                })
-                // Punto de inserción del JWT: CUENTA completa el cuerpo de JwtAuthenticationFilter.
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                });
+
+        // Integrar el filtro JWT solo con seguridad activa.
+        if (securityEnabled) {http.addFilterBefore(
+                    jwtAuthenticationFilter,
+                    UsernamePasswordAuthenticationFilter.class
+            );
+        }
 
         return http.build();
     }
 
     /** Disponible para CUENTA (registro/login). No contiene lógica de negocio. */
+    @Bean
+    public FilterRegistrationBean<JwtAuthenticationFilter>
+    jwtFilterRegistration(JwtAuthenticationFilter filtro) {
+
+        FilterRegistrationBean<JwtAuthenticationFilter> registro =
+                new FilterRegistrationBean<>(filtro);
+
+        registro.setEnabled(false);
+        return registro;
+    }
+
+    // BCrypt compartido con el modulo Cuentas.
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
