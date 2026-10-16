@@ -1,4 +1,4 @@
-package com.banduairlines.service.fidelizacion;
+package com.banduairlines.service.cuenta;
 
 import com.banduairlines.model.Beneficio;
 import com.banduairlines.model.enums.MotivoBloqueo;

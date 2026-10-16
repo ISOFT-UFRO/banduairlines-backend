@@ -3,7 +3,7 @@ package com.banduairlines.service;
 import com.banduairlines.model.Beneficio;
 import com.banduairlines.model.enums.MotivoBloqueo;
 import com.banduairlines.model.enums.Nivel;
-import com.banduairlines.service.fidelizacion.EvaluadorBeneficio;
+import com.banduairlines.service.cuenta.EvaluadorBeneficio;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

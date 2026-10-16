@@ -1,4 +1,4 @@
-package com.banduairlines.dto.fidelizacion;
+package com.banduairlines.dto.cuenta;
 
 import com.banduairlines.model.enums.MotivoBloqueo;
 import com.banduairlines.model.enums.Nivel;
