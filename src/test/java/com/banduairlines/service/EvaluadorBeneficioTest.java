@@ -30,7 +30,7 @@ class EvaluadorBeneficioTest {
     @Test
     void rechazaBeneficioNoDisponible() {
         assertEquals(MotivoBloqueo.BENEFICIO_AGOTADO,
-                evaluador.evaluar(beneficio(Nivel.BRONCE, 100, false), Nivel.ORO, 9999).orElseThrow());
+                evaluador.evaluar(beneficio(Nivel.BASICO, 100, false), Nivel.ORO, 9999).orElseThrow());
     }
 
     @Test
@@ -42,6 +42,6 @@ class EvaluadorBeneficioTest {
     @Test
     void rechazaPuntosInsuficientes() {
         assertEquals(MotivoBloqueo.PUNTOS_INSUFICIENTES,
-                evaluador.evaluar(beneficio(Nivel.BRONCE, 500, true), Nivel.BRONCE, 499).orElseThrow());
+                evaluador.evaluar(beneficio(Nivel.BASICO, 500, true), Nivel.BASICO, 499).orElseThrow());
     }
 }
