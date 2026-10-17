@@ -13,6 +13,8 @@ import com.banduairlines.model.enums.ClaseCabina;
 import com.banduairlines.model.enums.EstadoReserva;
 import com.banduairlines.model.enums.TipoPasajero;
 
+import com.banduairlines.model.Pasajero;
+
 public interface BoletoRepository extends JpaRepository<Boleto, Long>{
 
     /** RESERVA: boletos de una reserva ordenados por tramo. */
@@ -64,4 +66,7 @@ public interface BoletoRepository extends JpaRepository<Boleto, Long>{
                                          @Param("asientoId") Long asientoId,
                                          @Param("reservaId") Long reservaId,
                                          @Param("estados") Collection<EstadoReserva> estados);
+    //Cheking
+
+    List<Boleto> findByPasajeroId(Pasajero pasajeroId);
 }
