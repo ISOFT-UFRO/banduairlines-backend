@@ -2,7 +2,7 @@ package com.banduairlines.security;
 
 import com.banduairlines.model.Usuario;
 import com.banduairlines.repository.UsuarioRepository;
-import com.banduairlines.service.cuenta.JwtService;
+import com.banduairlines.service.impl.JwtService;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -41,7 +41,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String encabezado = request.getHeader(
                 HttpHeaders.AUTHORIZATION);
 
-        //Si no hay Bearer Token, continuar sin autenticar.
         if (encabezado == null ||
                 !encabezado.startsWith("Bearer ")) {
 
@@ -49,10 +48,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        //Extraer el JWT.
         String token = encabezado.substring(7).trim();
         try {
-            // Evitar reemplazar una autenticacion existente.
             if (SecurityContextHolder.getContext()
                     .getAuthentication() == null) {
 
@@ -60,7 +57,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
 
         } catch (JwtException | IllegalArgumentException ex) {
-            // No autenticar si el token es invalido.
             SecurityContextHolder.clearContext();
         }
         chain.doFilter(request, response);
@@ -68,21 +64,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private void autenticarUsuario(String token) {
 
-        // 1. Validar firma, expiracion y contenido del JWT.
         JwtService.DatosJwt datos = jwtService.validarTokenAcceso(token);
 
-        // 2. Buscar al usuario.
         Usuario usuario = usuarioRepository
                 .findById(datos.id())
                 .orElse(null);
 
-        // 3. Comprobar existencia y estado de la cuenta.
         if (usuario == null ||
                 !Boolean.TRUE.equals(usuario.getActivo())) {
             return;
         }
 
-        // 4. Comprobar que el correo y rol sigan vigentes.
         if (usuario.getEmail() == null ||
                 usuario.getRol() == null ||
                 !usuario.getEmail().trim()
@@ -92,18 +84,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        // 5. Crear la identidad autenticada.
+        jwtService.exigirHuellaVigente(
+                datos,
+                usuario.getPasswordHash()
+        );
+
         UsuarioAutenticado principal =
                 new UsuarioAutenticado(usuario.getId(), usuario.getEmail(), usuario.getRol());
 
-        // 6. Convertir el rol a una autoridad de Spring.
         var autoridades = List.of(
                 new SimpleGrantedAuthority(
                         "ROLE_" + usuario.getRol().name()
                 )
         );
 
-        // 7. Crear el objeto de autenticacion.
         var autenticacion =
                 new UsernamePasswordAuthenticationToken(
                         principal,
@@ -111,7 +105,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         autoridades
                 );
 
-        // 8. Registrar la identidad en Spring Security.
         SecurityContextHolder.getContext()
                 .setAuthentication(autenticacion);
     }
