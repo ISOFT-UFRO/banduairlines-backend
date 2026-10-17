@@ -1,19 +1,14 @@
 package com.banduairlines.service.impl;
 
 import java.time.Clock;
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
-import java.util.Map;
-import java.util.Comparator;
-import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.banduairlines.dto.busqueda.AeropuertoBusquedaResponse;
 import com.banduairlines.dto.busqueda.BusquedaVueloRequest;
-import com.banduairlines.dto.busqueda.OrdenVuelo;
 import com.banduairlines.dto.busqueda.VueloBusquedaResponse;
 import com.banduairlines.exception.RecursoNoEncontradoException;
 import com.banduairlines.exception.ReglaNegocioException;
@@ -23,8 +18,6 @@ import com.banduairlines.model.enums.Estado;
 import com.banduairlines.model.enums.EstadoVuelo;
 import com.banduairlines.repository.AeropuertoRepository;
 import com.banduairlines.repository.VueloRepository;
-import com.banduairlines.repository.TarifaVueloRepository;
-import com.banduairlines.repository.TarifaVueloRepository.PrecioMinimoVuelo;
 import com.banduairlines.service.BusquedaService;
 
 @Service
@@ -33,14 +26,11 @@ public class BusquedaServiceImpl implements BusquedaService {
     private final VueloRepository vuelos;
     private final AeropuertoRepository aeropuertos;
     private final Clock clock;
-    private final TarifaVueloRepository tarifas;
 
-    public BusquedaServiceImpl(VueloRepository vuelos, AeropuertoRepository aeropuertos, Clock clock,
-            TarifaVueloRepository tarifas) {
+    public BusquedaServiceImpl(VueloRepository vuelos, AeropuertoRepository aeropuertos, Clock clock) {
         this.vuelos = vuelos;
         this.aeropuertos = aeropuertos;
         this.clock = clock;
-        this.tarifas = tarifas;
     }
 
     @Override
@@ -68,25 +58,9 @@ public class BusquedaServiceImpl implements BusquedaService {
         if (encontrados.isEmpty()) {
             return List.of();
         }
-        Map<Long, BigDecimal> precios = tarifas.buscarPreciosMinimos(
-                encontrados.stream().map(Vuelo::getId).toList()).stream()
-                .collect(Collectors.toMap(PrecioMinimoVuelo::getVueloId, PrecioMinimoVuelo::getPrecioDesde));
         return encontrados.stream().map(v -> new VueloBusquedaResponse(v.getId(), v.getCodigoVuelo(),
                         mapear(v.getRuta().getOrigen()), mapear(v.getRuta().getDestino()),
-                        v.getSalidaProgramada(), v.getLlegadaProgramada(), v.getEstado(), precios.get(v.getId())))
-                .sorted(comparador(criterios.orden())).toList();
-    }
-
-    private Comparator<VueloBusquedaResponse> comparador(OrdenVuelo orden) {
-        Comparator<VueloBusquedaResponse> horario = Comparator
-                .comparing(VueloBusquedaResponse::salidaProgramada).thenComparing(VueloBusquedaResponse::id);
-        if (orden == null || orden == OrdenVuelo.HORARIO) {
-            return horario;
-        }
-        Comparator<BigDecimal> precio = orden == OrdenVuelo.PRECIO_DESC
-                ? Comparator.reverseOrder() : Comparator.naturalOrder();
-        return Comparator.comparing(VueloBusquedaResponse::precioDesde, Comparator.nullsLast(precio))
-                .thenComparing(horario);
+                        v.getSalidaProgramada(), v.getLlegadaProgramada(), v.getEstado())).toList();
     }
 
     @Override
