@@ -23,4 +23,14 @@ class CompraTokenServiceTest {
     void generar_dependeDelSecreto() {
         assertThat(new CompraTokenService("otro-secreto").generar(7L)).isNotEqualTo(service.generar(7L));
     }
-}
+
+    @Test
+    void sinSecretoConfigurado_usaUnaClaveAleatoriaPropia() {
+        CompraTokenService sinSecreto = new CompraTokenService("");
+        String token = sinSecreto.generar(7L);
+
+        assertThat(sinSecreto.esValido(7L, token)).isTrue();
+        assertThat(new CompraTokenService("").esValido(7L, token)).isFalse();
+        assertThat(new CompraTokenService(null).generar(7L)).isNotBlank();
+    }
+}

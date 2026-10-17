@@ -10,10 +10,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.banduairlines.dto.reserva.ReservaCanceladaResponse;
 import com.banduairlines.exception.ConflictoException;
+import com.banduairlines.model.Boleto;
 import com.banduairlines.model.Reserva;
 import com.banduairlines.model.enums.EstadoReserva;
 import com.banduairlines.repository.BoletoRepository;
 import com.banduairlines.repository.ReservaRepository;
+import com.banduairlines.service.reserva.AsientosReserva;
+import com.banduairlines.service.reserva.CalculadoraTotalReserva;
 import com.banduairlines.service.reserva.ReservaAcceso;
 import com.banduairlines.service.reserva.ReservaCancelacionService;
 
@@ -26,14 +29,20 @@ public class ReservaCancelacionServiceImpl implements ReservaCancelacionService 
     private final ReservaAcceso reservaAcceso;
     private final ReservaRepository reservaRepository;
     private final BoletoRepository boletoRepository;
+    private final CalculadoraTotalReserva calculadora;
 
     public ReservaCancelacionServiceImpl(ReservaAcceso reservaAcceso, ReservaRepository reservaRepository,
-                                         BoletoRepository boletoRepository) {
+                                         BoletoRepository boletoRepository, CalculadoraTotalReserva calculadora) {
         this.reservaAcceso = reservaAcceso;
         this.reservaRepository = reservaRepository;
         this.boletoRepository = boletoRepository;
+        this.calculadora = calculadora;
     }
 
+    /**
+     * Una CONFIRMADA ya está pagada (su anulación es de Gestión del Viaje) y una CANCELADA no cambia:
+     * 409 ESTADO_INVALIDO. Una PENDIENTE_PAGO se puede cancelar aunque su bloqueo ya haya vencido.
+     */
     @Override
     public ReservaCanceladaResponse cancelar(Long reservaId, String compraToken) {
         Reserva reserva = reservaAcceso.obtenerAutorizada(reservaId, compraToken);
@@ -59,10 +68,15 @@ public class ReservaCancelacionServiceImpl implements ReservaCancelacionService 
         return vencidas.size();
     }
 
+    /**
+     * Los boletos se conservan como historial, pero sin asiento ni cobro de asiento, y el total se recalcula:
+     * el asiento queda libre y el cupo también, porque la disponibilidad no cuenta reservas CANCELADA.
+     */
     private void cancelarYLiberar(Reserva reserva) {
         reserva.setEstado(EstadoReserva.CANCELADA);
-        boletoRepository.findByReserva_IdOrderByOrdenTramoAscIdAsc(reserva.getId())
-                .forEach(boleto -> boleto.setAsientoId(null));
+        List<Boleto> boletos = boletoRepository.findByReserva_IdOrderByOrdenTramoAscIdAsc(reserva.getId());
+        boletos.forEach(AsientosReserva::liberar);
+        calculadora.aplicar(reserva, calculadora.calcular(boletos, reserva.getPromocion(), false));
         reservaRepository.save(reserva);
     }
 }
