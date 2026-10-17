@@ -1,6 +1,7 @@
 package com.banduairlines.controller.reportes;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,7 +28,7 @@ public class ReporteController {
     }
 
     @GetMapping("/filtros")
-    //@PreAuthorize("hasRole('ADMINISTRADOR')")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @Operation(
             summary = "Consultar estadísticas comerciales",
             description = "Permite filtrar ventas, ingresos, ocupación, rutas, estados, pasajeros y tarifas.")
