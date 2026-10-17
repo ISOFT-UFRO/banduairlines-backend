@@ -9,6 +9,11 @@ import java.util.Optional;
 import com.banduairlines.model.MovimientoMilla;
 
 public interface MovimientoMillaRepository extends JpaRepository<MovimientoMilla, Long>{
+    org.springframework.data.domain.Page<MovimientoMilla> findByCuentaFidelizacion_UsuarioIdOrderByCreatedAtDescIdDesc(
+            Long idUsuario, org.springframework.data.domain.Pageable pagina);
+
+    List<MovimientoMilla> findByTipo(TipoMovimiento tipo);
+
     List<MovimientoMilla> findByCuentaFidelizacion_UsuarioIdAndTipo(Long idUsuario, TipoMovimiento tipo);
 
     Optional<MovimientoMilla> findByCuentaFidelizacion_UsuarioIdAndTipoAndDescripcion(
