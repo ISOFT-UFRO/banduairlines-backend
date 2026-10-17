@@ -16,6 +16,7 @@ public class SolicitudesRecuperacionMemoriaServiceImpl
 
     private final GeneradorTokenRecuperacion generador;
     private final Duration duracion;
+    private final java.time.Clock reloj;
 
     private final Map<String, SolicitudTemporal> solicitudes =
             new HashMap<>();
@@ -26,7 +27,7 @@ public class SolicitudesRecuperacionMemoriaServiceImpl
     public SolicitudesRecuperacionMemoriaServiceImpl(
             GeneradorTokenRecuperacion generador,
             @Value("${app.cuenta.recuperacion.expiracion-minutos:10}")
-            long minutosExpiracion) {
+            long minutosExpiracion, java.time.Clock reloj) {
 
         if (minutosExpiracion <= 0) {
             throw new IllegalArgumentException(
@@ -35,6 +36,7 @@ public class SolicitudesRecuperacionMemoriaServiceImpl
         }
 
         this.generador = generador;
+        this.reloj = reloj;
         this.duracion = Duration.ofMinutes(minutosExpiracion);
     }
 
@@ -48,7 +50,7 @@ public class SolicitudesRecuperacionMemoriaServiceImpl
             );
         }
 
-        Instant ahora = Instant.now();
+        Instant ahora = reloj.instant();
         limpiarExpiradas(ahora);
 
         // Crear token nuevo y evitar colisiones.
@@ -86,7 +88,7 @@ public class SolicitudesRecuperacionMemoriaServiceImpl
     @Override
     public synchronized boolean esValido(String token) {
 
-        Instant ahora = Instant.now();
+        Instant ahora = reloj.instant();
         limpiarExpiradas(ahora);
 
         String hash = calcularHashSeguro(token);
@@ -101,9 +103,9 @@ public class SolicitudesRecuperacionMemoriaServiceImpl
     }
 
     @Override
-    public synchronized Optional<Long> consumirSolicitud(String token) {
+    public synchronized Optional<Long> consumirSolicitud(String token, java.util.function.LongConsumer operacion) {
 
-        Instant ahora = Instant.now();
+        Instant ahora = reloj.instant();
         limpiarExpiradas(ahora);
 
         String hash = calcularHashSeguro(token);
@@ -118,7 +120,8 @@ public class SolicitudesRecuperacionMemoriaServiceImpl
             return Optional.empty();
         }
 
-        solicitud.fechaUso = ahora;
+        operacion.accept(solicitud.idUsuario);
+        solicitud.fechaUso = reloj.instant();
 
         ultimaPorUsuario.remove(solicitud.idUsuario, hash);
 
@@ -128,7 +131,7 @@ public class SolicitudesRecuperacionMemoriaServiceImpl
     @Override
     public synchronized EstadoToken estadoToken(String token) {
 
-        Instant ahora = Instant.now();
+        Instant ahora = reloj.instant();
 
         limpiarExpiradas(ahora);
 
@@ -151,6 +154,12 @@ public class SolicitudesRecuperacionMemoriaServiceImpl
         return EstadoToken.VALIDO;
     }
 
+
+    @Override
+    public synchronized void invalidarUsuario(Long idUsuario) {
+        solicitudes.values().removeIf(s -> s.idUsuario.equals(idUsuario));
+        ultimaPorUsuario.remove(idUsuario);
+    }
 
     private boolean estaDisponible(
             SolicitudTemporal solicitud,

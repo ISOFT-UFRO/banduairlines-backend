@@ -72,92 +72,63 @@ public class JwtService {
     }
 
 
-    public String generarTokenAcceso(
-            UsuarioAutenticado usuario,
-            String hashContrasena) {
+    private final java.util.Map<String, Sesion> sesiones = new java.util.HashMap<>();
+
+    public synchronized Credenciales emitirSesion(UsuarioAutenticado usuario, String hashContrasena) {
         exigirClave();
-        Objects.requireNonNull(usuario, "El usuario es obligatorio");
-
-        if (usuario.id() == null || usuario.id() <= 0) {
-            throw new IllegalArgumentException(
-                    "El usuario debe tener un ID válido");
+        Objects.requireNonNull(usuario);
+        if (usuario.id() == null || usuario.id() <= 0 || usuario.rol() == null
+                || usuario.email() == null || usuario.email().isBlank()) {
+            throw new IllegalArgumentException("Identidad incompleta");
         }
-
-        // Verificamos que exista un rol.
-        if (usuario.rol() == null) {
-            throw new IllegalArgumentException(
-                    "El usuario debe tener un rol");
-        }
-
-        // Verificamos que exista un correo.
-        if (usuario.email() == null || usuario.email().isBlank()) {
-            throw new IllegalArgumentException(
-                    "El correo es obligatorio");
-        }
-
-        String sujeto = usuario.id().toString();
-
-        String correo = usuario.email()
-                .trim()
-                .toLowerCase(Locale.ROOT);
-
         Instant ahora = Instant.now();
-
-        return Jwts.builder()
-                .setSubject(sujeto)
-                .setIssuer(EMISOR)
-                .setAudience(AUDIENCIA)
-                .setIssuedAt(Date.from(ahora))
-                .setExpiration(Date.from(
-                        ahora.plusMillis(expiracionMs)))
-                .claim("email", correo)
-                .claim("rol", usuario.rol().name())
-                .claim("tipo", TIPO_ACCESO)
-                .claim("huellaCredenciales",
-                        generarHuellaCredenciales(
-                                usuario.id(), hashContrasena))
-                .signWith(clave, SignatureAlgorithm.HS256)
-                .compact();
+        sesiones.values().removeIf(s -> !s.expiracion().isAfter(ahora));
+        String idSesion = UUID.randomUUID().toString();
+        String acceso = generarToken(usuario, hashContrasena, idSesion, TIPO_ACCESO, ahora, expiracionMs);
+        String renovacion = generarToken(usuario, hashContrasena, idSesion, TIPO_RENOVACION, ahora, expiracionRenovacionMs);
+        sesiones.put(idSesion, new Sesion(usuario.id(), ahora.plusMillis(Math.max(expiracionMs, expiracionRenovacionMs))));
+        return new Credenciales(acceso, renovacion);
     }
 
-    public String generarTokenRenovacion(
-            UsuarioAutenticado usuario,
-            String hashContrasena) {
-        exigirClave();
-        Objects.requireNonNull(usuario, "El usuario es obligatorio");
-
-        if (usuario.id() == null || usuario.id() <= 0
-                || usuario.rol() == null
-                || usuario.email() == null
-                || usuario.email().isBlank()) {
-
-            throw new IllegalArgumentException(
-                    "Los datos del usuario no son validos");
-        }
-
-        String correo = usuario.email()
-                .trim()
-                .toLowerCase(Locale.ROOT);
-
-        Instant ahora = Instant.now();
-
-        return Jwts.builder()
-                .setId(UUID.randomUUID().toString())
-                .setSubject(usuario.id().toString())
-                .setIssuer(EMISOR)
-                .setAudience(AUDIENCIA)
-                .setIssuedAt(Date.from(ahora))
-                .setExpiration(Date.from(
-                        ahora.plusMillis(expiracionRenovacionMs)))
-                .claim("email", correo)
-                .claim("rol", usuario.rol().name())
-                .claim("tipo", TIPO_RENOVACION)
-                .claim("huellaCredenciales",
-                        generarHuellaCredenciales(
-                                usuario.id(), hashContrasena))
-                .signWith(clave, SignatureAlgorithm.HS256)
-                .compact();
+    private String generarToken(UsuarioAutenticado usuario, String hash, String sesion, String tipo,
+                                 Instant ahora, long duracion) {
+        return Jwts.builder().setId(UUID.randomUUID().toString())
+                .setSubject(usuario.id().toString()).setIssuer(EMISOR).setAudience(AUDIENCIA)
+                .setIssuedAt(Date.from(ahora)).setExpiration(Date.from(ahora.plusMillis(duracion)))
+                .claim("email", usuario.email().trim().toLowerCase(Locale.ROOT))
+                .claim("rol", usuario.rol().name()).claim("tipo", tipo).claim("sesion", sesion)
+                .claim("huellaCredenciales", generarHuellaCredenciales(usuario.id(), hash))
+                .signWith(clave, SignatureAlgorithm.HS256).compact();
     }
+
+    public synchronized Credenciales rotarSesion(String token, UsuarioAutenticado usuario, String hash) {
+        DatosJwt datos = validarTokenRenovacion(token);
+        if (!datos.id().equals(usuario.id())) throw new JwtException("Sesion ajena");
+        exigirHuellaVigente(datos, hash);
+        Credenciales nuevas = emitirSesion(usuario, hash);
+        sesiones.remove(datos.idSesion());
+        return nuevas;
+    }
+
+    public synchronized void cerrarSesion(String token, Long idUsuario) {
+        DatosJwt datos = validarTokenRenovacion(token);
+        if (!datos.id().equals(idUsuario)) throw new JwtException("Sesion ajena");
+        sesiones.remove(datos.idSesion());
+    }
+
+    public synchronized void revocarTodas(Long idUsuario) {
+        sesiones.values().removeIf(s -> s.idUsuario().equals(idUsuario));
+    }
+
+    private synchronized void exigirSesion(String idSesion, Long idUsuario) {
+        Sesion sesion = idSesion == null ? null : sesiones.get(idSesion);
+        if (sesion == null || !sesion.idUsuario().equals(idUsuario) || !sesion.expiracion().isAfter(Instant.now())) {
+            throw new JwtException("Sesion cerrada o vencida");
+        }
+    }
+
+    public record Credenciales(String acceso, String renovacion) { }
+    private record Sesion(Long idUsuario, Instant expiracion) { }
 
     private DatosJwt validarToken(
             String token,
@@ -238,7 +209,10 @@ public class JwtService {
                     "Identificador de usuario invalido", ex);
         }
 
-        return new DatosJwt(id, correo, rol, huellaCredenciales);    }
+        String idSesion = claims.get("sesion", String.class);
+        exigirSesion(idSesion, id);
+        return new DatosJwt(id, correo, rol, huellaCredenciales, idSesion);
+    }
 
     public DatosJwt validarTokenAcceso(String token) {
         return validarToken(token, TIPO_ACCESO);
@@ -332,6 +306,7 @@ public class JwtService {
             Long id,
             String email,
             RolUsuario rol,
-            String huellaCredenciales
+            String huellaCredenciales,
+            String idSesion
     ) {}
 }

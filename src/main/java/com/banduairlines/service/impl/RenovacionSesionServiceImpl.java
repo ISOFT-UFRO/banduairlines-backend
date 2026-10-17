@@ -84,11 +84,14 @@ public class RenovacionSesionServiceImpl
                         usuario.getRol()
                 );
 
-        String credencialAcceso =
-                jwtService.generarTokenAcceso(identidad, usuario.getPasswordHash());
-
-        String credencialRenovacion =
-                jwtService.generarTokenRenovacion(identidad, usuario.getPasswordHash());
+        JwtService.Credenciales credenciales;
+        try {
+            credenciales = jwtService.rotarSesion(solicitud.credencialRenovacion(), identidad, usuario.getPasswordHash());
+        } catch (ExpiredJwtException ex) {
+            throw new CredencialRenovacionException(true);
+        } catch (JwtException | IllegalArgumentException ex) {
+            throw new CredencialRenovacionException(false);
+        }
 
         Nivel nivel = null;
 
@@ -113,8 +116,8 @@ public class RenovacionSesionServiceImpl
                 );
 
         return new RespuestaSesion(
-                credencialAcceso,
-                credencialRenovacion,
+                credenciales.acceso(),
+                credenciales.renovacion(),
                 "Bearer",
                 jwtService.obtenerSegundosExpiracion(),
                 datosUsuario

@@ -28,10 +28,15 @@ import java.util.List;
 public class SesionController {
 
     private final RenovacionSesionService renovacionSesionService;
+    private final com.banduairlines.service.impl.JwtService jwt;
+    private final com.banduairlines.security.UsuarioActual usuarioActual;
 
     public SesionController(
-            RenovacionSesionService renovacionSesionService) {
+            RenovacionSesionService renovacionSesionService, com.banduairlines.service.impl.JwtService jwt,
+            com.banduairlines.security.UsuarioActual usuarioActual) {
         this.renovacionSesionService = renovacionSesionService;
+        this.jwt = jwt;
+        this.usuarioActual = usuarioActual;
     }
 
     @PostMapping("/renovacion")
@@ -64,14 +69,12 @@ public class SesionController {
     @PostMapping("/cierre-sesion")
     @Operation(
             summary = "Cerrar sesion",
-            description = "Confirma el cierre local de sesion. "
-                    + "Los JWT emitidos no pueden revocarse "
-                    + "anticipadamente en el esquema stateless."
+            description = "Invalida las credenciales de acceso y renovacion de la sesion indicada."
     )
     @ApiResponses({
             @ApiResponse(
                     responseCode = "204",
-                    description = "Cierre local confirmado"
+                    description = "Sesion cerrada"
             ),
             @ApiResponse(
                     responseCode = "401",
@@ -81,7 +84,14 @@ public class SesionController {
     public ResponseEntity<Void> cerrarSesion(
             @Valid @RequestBody SolicitudRenovacion solicitud) {
 
-        return ResponseEntity.noContent().build();
+        try {
+            jwt.cerrarSesion(solicitud.credencialRenovacion(), usuarioActual.exigirId());
+        } catch (io.jsonwebtoken.ExpiredJwtException ex) {
+            throw new CredencialRenovacionException(true);
+        } catch (io.jsonwebtoken.JwtException | IllegalArgumentException ex) {
+            throw new CredencialRenovacionException(false);
+        }
+        return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
     }
 
     @ExceptionHandler(CredencialRenovacionException.class)

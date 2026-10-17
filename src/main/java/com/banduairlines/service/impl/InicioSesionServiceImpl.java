@@ -61,11 +61,7 @@ public class InicioSesionServiceImpl implements InicioSesionService {
                 );
 
 
-        String credencialAcceso =
-                jwtService.generarTokenAcceso(identidad, usuario.getPasswordHash());
-
-        String credencialRenovacion =
-                jwtService.generarTokenRenovacion(identidad, usuario.getPasswordHash());
+        var credenciales = jwtService.emitirSesion(identidad, usuario.getPasswordHash());
 
         Nivel nivel = null;
 
@@ -90,8 +86,8 @@ public class InicioSesionServiceImpl implements InicioSesionService {
                 );
 
         return new RespuestaSesion(
-                credencialAcceso,
-                credencialRenovacion,
+                credenciales.acceso(),
+                credenciales.renovacion(),
                 "Bearer",
                 jwtService.obtenerSegundosExpiracion(),
                 datosUsuario

@@ -9,7 +9,9 @@ public interface SolicitudesRecuperacionService {
 
     boolean esValido(String token);
 
-    Optional<Long> consumirSolicitud(String token);
+    Optional<Long> consumirSolicitud(String token, java.util.function.LongConsumer operacion);
+
+    void invalidarUsuario(Long idUsuario);
 
     EstadoToken estadoToken(String token);
 

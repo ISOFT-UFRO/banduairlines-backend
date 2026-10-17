@@ -9,4 +9,5 @@ public interface ServicioCorreo {
             String codigo,
             Instant fechaExpiracion
     );
+    void notificarEliminacionCuenta(String destinatario);
 }

@@ -36,6 +36,8 @@ public class RecuperacionContrasenaServiceImpl
     private final SolicitudesRecuperacionService solicitudes;
     private final ServicioCorreoRecuperacion servicioCorreo;
     private final String urlBase;
+    private final org.springframework.transaction.support.TransactionTemplate transaccion;
+    private final JwtService jwt;
 
     public RecuperacionContrasenaServiceImpl(
             JdbcTemplate jdbcTemplate,
@@ -43,18 +45,24 @@ public class RecuperacionContrasenaServiceImpl
             SolicitudesRecuperacionService solicitudes,
             ServicioCorreoRecuperacion servicioCorreo,
             @Value("${app.cuenta.recuperacion.url-base}")
-            String urlBase) {
+            String urlBase,
+            org.springframework.transaction.PlatformTransactionManager transacciones,
+            JwtService jwt) {
 
         this.jdbcTemplate = jdbcTemplate;
         this.passwordEncoder = passwordEncoder;
         this.solicitudes = solicitudes;
         this.servicioCorreo = servicioCorreo;
         this.urlBase = urlBase;
+        this.jwt = jwt;
+        this.transaccion = new org.springframework.transaction.support.TransactionTemplate(transacciones);
+        this.transaccion.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
     @Override
     public void solicitarRecuperacion(String correo) {
 
+        validarUrlRecuperacion();
         String correoNormalizado = correo
                 .trim()
                 .toLowerCase(Locale.ROOT);
@@ -126,7 +134,7 @@ public class RecuperacionContrasenaServiceImpl
         if (!solicitud.nuevaContrasena().equals(
                 solicitud.confirmacionContrasena())) {
 
-            throw new IllegalArgumentException(
+            throw new com.banduairlines.exception.ValidacionException(
                     "La nueva contrasena y su confirmacion no coinciden"
             );
         }
@@ -136,43 +144,31 @@ public class RecuperacionContrasenaServiceImpl
 
         exigirCodigoValido(estado);
 
-        Optional<Long> idUsuario =
-                solicitudes.consumirSolicitud(codigoRecuperacion);
-
+        String nuevoHash = passwordEncoder.encode(solicitud.nuevaContrasena());
+        Optional<Long> idUsuario = solicitudes.consumirSolicitud(codigoRecuperacion, id ->
+                transaccion.executeWithoutResult(tx -> {
+                    int filas = jdbcTemplate.update("""
+                            UPDATE usuarios SET password_hash = ?, updated_at = CURRENT_TIMESTAMP
+                            WHERE id = ? AND activo = TRUE
+                            """, nuevoHash, id);
+                    if (filas != 1) throw new CodigoRecuperacionException(EstadoToken.INVALIDO);
+                }));
         if (idUsuario.isEmpty()) {
-
-            EstadoToken estadoActual =
-                    solicitudes.estadoToken(codigoRecuperacion);
-
-            throw new CodigoRecuperacionException(
-                    estadoActual == EstadoToken.VALIDO
-                            ? EstadoToken.INVALIDO
-                            : estadoActual
-            );
+            throw new CodigoRecuperacionException(solicitudes.estadoToken(codigoRecuperacion));
         }
+        jwt.revocarTodas(idUsuario.get());
+    }
 
-        String nuevoHash = passwordEncoder.encode(
-                solicitud.nuevaContrasena()
-        );
-
-        int filasActualizadas = jdbcTemplate.update(
-                """
-                UPDATE usuarios
-                SET password_hash = ?,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?
-                  AND activo = TRUE
-                """,
-                nuevoHash,
-                idUsuario.get()
-        );
-
-        if (filasActualizadas != 1) {
-            throw new CodigoRecuperacionException(
-                    EstadoToken.INVALIDO
-            );
+    private void validarUrlRecuperacion() {
+        try {
+            var uri = java.net.URI.create(urlBase);
+            if (!("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()))
+                    || uri.getHost() == null || uri.getFragment() != null || uri.getUserInfo() != null) {
+                throw new IllegalArgumentException();
+            }
+        } catch (IllegalArgumentException ex) {
+            throw new ServicioExternoException("Falta configurar una URL valida para recuperar la contrasena");
         }
-
     }
 
     private void exigirCodigoValido(EstadoToken estado) {

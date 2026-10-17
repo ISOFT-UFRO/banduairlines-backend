@@ -92,6 +92,12 @@ public class ServicioCorreoSmtpImpl
         enviarCorreo(destinatario, asunto, contenido);
     }
 
+    @Override
+    public void notificarEliminacionCuenta(String destinatario) {
+        enviarCorreo(destinatario, "BanduAirlines - Cuenta eliminada",
+                "Tu cuenta de BanduAirlines ha sido eliminada.");
+    }
+
     private void enviarCorreo(
             String destinatario,
             String asunto,
