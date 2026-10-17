@@ -56,7 +56,6 @@ class AvionServiceImplTest {
         requestDto = new AvionRequestDto();
         requestDto.setMatricula("CC-BNA");
         requestDto.setModelo("Airbus A320neo");
-        requestDto.setCapacidadCarga(5500.0);
         requestDto.setAsientos(List.of(asientoDto));
 
         avionGuardado = Avion.builder()

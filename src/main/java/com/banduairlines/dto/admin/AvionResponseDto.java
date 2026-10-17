@@ -12,7 +12,6 @@ public class AvionResponseDto {
     private Long id;
     private String matricula;
     private String modelo;
-    private Double capacidadCarga;
     private Estado estado;
     private int totalAsientos;
 }
