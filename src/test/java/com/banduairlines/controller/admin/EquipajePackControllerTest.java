@@ -1,7 +1,7 @@
 package com.banduairlines.controller.admin;
 
-import com.banduairlines.dto.admin.EquipajePackRespuesta;
-import com.banduairlines.dto.admin.EquipajePackSolicitud;
+import com.banduairlines.dto.admin.EquipajePackResponse;
+import com.banduairlines.dto.admin.EquipajePackRequest;
 import com.banduairlines.exception.GlobalExceptionHandler;
 import com.banduairlines.service.admin.EquipajePackService;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,7 +33,7 @@ class EquipajePackControllerTest {
         @InjectMocks
         private EquipajePackController controlador;
 
-        private final EquipajePackRespuesta respuesta = new EquipajePackRespuesta(
+        private final EquipajePackResponse respuesta = new EquipajePackResponse(
                         1L,
                         "Prueba RF06",
                         true,
@@ -64,7 +64,7 @@ class EquipajePackControllerTest {
 
         @Test
         void actualizarRecibeElJsonYDevuelveEquipaje() throws Exception {
-                EquipajePackSolicitud solicitud = new EquipajePackSolicitud(
+                EquipajePackRequest solicitud = new EquipajePackRequest(
                                 true,
                                 1,
                                 23);
@@ -108,7 +108,7 @@ class EquipajePackControllerTest {
         void actualizarDevuelveErrorPorEquipajeIncoherente()
                         throws Exception {
 
-                EquipajePackSolicitud solicitud = new EquipajePackSolicitud(
+                EquipajePackRequest solicitud = new EquipajePackRequest(
                                 true, 0, 23);
 
                 when(servicio.actualizar(1L, solicitud))

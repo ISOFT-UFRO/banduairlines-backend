@@ -4,10 +4,7 @@ import java.math.BigDecimal;
 
 import com.banduairlines.model.enums.TipoExtra;
 
-/**
- * Respuesta con los datos de un servicio adicional (RF-07).
- */
-public record ExtraRespuesta(
+public record ExtraResponse(
         Long id,
         TipoExtra tipo,
         String nombre,

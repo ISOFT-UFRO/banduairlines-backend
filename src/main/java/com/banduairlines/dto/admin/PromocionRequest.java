@@ -10,7 +10,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
-public record PromocionSolicitud(
+public record PromocionRequest(
         @NotBlank(message = "El código es obligatorio")
         @Size(max = 30, message = "El código no puede superar los 30 caracteres")
         String codigo,

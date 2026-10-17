@@ -21,8 +21,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import com.banduairlines.dto.admin.PromocionRespuesta;
-import com.banduairlines.dto.admin.PromocionSolicitud;
+import com.banduairlines.dto.admin.PromocionResponse;
+import com.banduairlines.dto.admin.PromocionRequest;
 import com.banduairlines.exception.CodigosError;
 import com.banduairlines.exception.GlobalExceptionHandler;
 import com.banduairlines.model.enums.TipoDescuento;
@@ -70,7 +70,7 @@ class PromocionControllerTest {
 
     @Test
     void crear_cuandoLaSolicitudEsValida_retorna201ConLaPromocionCreada() throws Exception {
-        when(promocionService.crear(any(PromocionSolicitud.class))).thenReturn(respuesta());
+        when(promocionService.crear(any(PromocionRequest.class))).thenReturn(respuesta());
 
         mockMvc.perform(post(RUTA).contentType(MediaType.APPLICATION_JSON).content(SOLICITUD_VALIDA))
                 .andExpect(status().isCreated())
@@ -94,11 +94,11 @@ class PromocionControllerTest {
                 .andExpect(jsonPath("$.activa").value(false));
     }
 
-    private PromocionRespuesta respuesta() {
-        return new PromocionRespuesta(ID, CODIGO, TipoDescuento.PORCENTAJE, VALOR, INICIO, EXPIRACION, 100, 0, true);
+    private PromocionResponse respuesta() {
+        return new PromocionResponse(ID, CODIGO, TipoDescuento.PORCENTAJE, VALOR, INICIO, EXPIRACION, 100, 0, true);
     }
 
-    private PromocionRespuesta respuestaInactiva() {
-        return new PromocionRespuesta(ID, CODIGO, TipoDescuento.PORCENTAJE, VALOR, INICIO, EXPIRACION, 100, 0, false);
+    private PromocionResponse respuestaInactiva() {
+        return new PromocionResponse(ID, CODIGO, TipoDescuento.PORCENTAJE, VALOR, INICIO, EXPIRACION, 100, 0, false);
     }
 }

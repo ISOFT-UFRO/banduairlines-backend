@@ -2,18 +2,18 @@ package com.banduairlines.service.admin;
 
 import java.util.List;
 
-import com.banduairlines.dto.admin.PromocionRespuesta;
-import com.banduairlines.dto.admin.PromocionSolicitud;
+import com.banduairlines.dto.admin.PromocionResponse;
+import com.banduairlines.dto.admin.PromocionRequest;
 
 public interface PromocionService {
 
-    List<PromocionRespuesta> listar(Boolean activa);
+    List<PromocionResponse> listar(Boolean activa);
 
-    PromocionRespuesta obtener(Long id);
+    PromocionResponse obtener(Long id);
 
-    PromocionRespuesta crear(PromocionSolicitud solicitud);
+    PromocionResponse crear(PromocionRequest solicitud);
 
-    PromocionRespuesta actualizar(Long id, PromocionSolicitud solicitud);
+    PromocionResponse actualizar(Long id, PromocionRequest solicitud);
 
-    PromocionRespuesta cambiarEstado(Long id, boolean activa);
+    PromocionResponse cambiarEstado(Long id, boolean activa);
 }

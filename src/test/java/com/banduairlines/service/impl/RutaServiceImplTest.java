@@ -1,6 +1,6 @@
 package com.banduairlines.service.impl;
 
-import com.banduairlines.dto.admin.RutaSolicitud;
+import com.banduairlines.dto.admin.RutaRequest;
 import com.banduairlines.exception.ConflictoException;
 import com.banduairlines.model.Aeropuerto;
 import com.banduairlines.model.Ruta;
@@ -66,7 +66,7 @@ class RutaServiceImplTest {
                 when(rutas.contarVuelosAsociados(10L))
                                 .thenReturn(1L);
 
-                RutaSolicitud solicitud = new RutaSolicitud(
+                RutaRequest solicitud = new RutaRequest(
                                 1L,
                                 3L,
                                 700,
@@ -123,7 +123,7 @@ class RutaServiceImplTest {
                 when(rutas.saveAndFlush(any(Ruta.class)))
                                 .thenReturn(ruta);
 
-                RutaSolicitud solicitud = new RutaSolicitud(
+                RutaRequest solicitud = new RutaRequest(
                                 1L,
                                 2L,
                                 630,
@@ -187,7 +187,7 @@ class RutaServiceImplTest {
                 when(rutas.saveAndFlush(any(Ruta.class)))
                                 .thenReturn(ruta);
 
-                RutaSolicitud solicitud = new RutaSolicitud(
+                RutaRequest solicitud = new RutaRequest(
                                 1L,
                                 3L,
                                 430,
@@ -209,7 +209,7 @@ class RutaServiceImplTest {
 
         @Test
         void crearRechazaOrigenIgualAlDestino() {
-                RutaSolicitud solicitud = new RutaSolicitud(
+                RutaRequest solicitud = new RutaRequest(
                                 1L,
                                 1L,
                                 100,
@@ -228,7 +228,7 @@ class RutaServiceImplTest {
                 when(rutas.contarDuplicadasAdministracion(1L, 2L, null))
                                 .thenReturn(1L);
 
-                RutaSolicitud solicitud = new RutaSolicitud(
+                RutaRequest solicitud = new RutaRequest(
                                 1L,
                                 2L,
                                 620,
@@ -316,7 +316,7 @@ class RutaServiceImplTest {
                 when(rutas.contarVuelosPorEstado(10L, EstadoVuelo.PROGRAMADO))
                                 .thenReturn(1L);
 
-                RutaSolicitud solicitud = new RutaSolicitud(
+                RutaRequest solicitud = new RutaRequest(
                                 1L, 2L, 630, 90, false);
 
                 assertThatThrownBy(() -> servicio.actualizar(10L, solicitud))

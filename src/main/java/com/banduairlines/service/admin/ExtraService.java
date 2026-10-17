@@ -2,22 +2,18 @@ package com.banduairlines.service.admin;
 
 import java.util.List;
 
-import com.banduairlines.dto.admin.ExtraRespuesta;
-import com.banduairlines.dto.admin.ExtraSolicitud;
+import com.banduairlines.dto.admin.ExtraResponse;
+import com.banduairlines.dto.admin.ExtraRequest;
 
-/**
- * Servicio del módulo Administración para gestionar los servicios adicionales
- * disponibles y su precio (RF-07).
- */
 public interface ExtraService {
 
-    List<ExtraRespuesta> listar(Boolean activo);
+    List<ExtraResponse> listar(Boolean activo);
 
-    ExtraRespuesta obtener(Long id);
+    ExtraResponse obtener(Long id);
 
-    ExtraRespuesta crear(ExtraSolicitud solicitud);
+    ExtraResponse crear(ExtraRequest solicitud);
 
-    ExtraRespuesta actualizar(Long id, ExtraSolicitud solicitud);
+    ExtraResponse actualizar(Long id, ExtraRequest solicitud);
 
-    ExtraRespuesta cambiarEstado(Long id, boolean activo);
+    ExtraResponse cambiarEstado(Long id, boolean activo);
 }

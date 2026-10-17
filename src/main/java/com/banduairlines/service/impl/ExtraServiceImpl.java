@@ -5,16 +5,13 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.banduairlines.dto.admin.ExtraRespuesta;
-import com.banduairlines.dto.admin.ExtraSolicitud;
+import com.banduairlines.dto.admin.ExtraResponse;
+import com.banduairlines.dto.admin.ExtraRequest;
 import com.banduairlines.exception.RecursoNoEncontradoException;
 import com.banduairlines.model.Extra;
 import com.banduairlines.repository.ExtraRepository;
 import com.banduairlines.service.admin.ExtraService;
 
-/**
- * Implementación del servicio de gestión de servicios adicionales (RF-07).
- */
 @Service
 @Transactional
 public class ExtraServiceImpl implements ExtraService {
@@ -27,7 +24,7 @@ public class ExtraServiceImpl implements ExtraService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ExtraRespuesta> listar(Boolean activo) {
+    public List<ExtraResponse> listar(Boolean activo) {
         return extraRepository.listarAdministracion(activo)
                 .stream()
                 .map(this::mapearADto)
@@ -36,12 +33,12 @@ public class ExtraServiceImpl implements ExtraService {
 
     @Override
     @Transactional(readOnly = true)
-    public ExtraRespuesta obtener(Long id) {
+    public ExtraResponse obtener(Long id) {
         return mapearADto(exigirExtra(id));
     }
 
     @Override
-    public ExtraRespuesta crear(ExtraSolicitud solicitud) {
+    public ExtraResponse crear(ExtraRequest solicitud) {
         Extra extra = Extra.builder()
                 .tipo(solicitud.tipo())
                 .nombre(solicitud.nombre())
@@ -54,7 +51,7 @@ public class ExtraServiceImpl implements ExtraService {
     }
 
     @Override
-    public ExtraRespuesta actualizar(Long id, ExtraSolicitud solicitud) {
+    public ExtraResponse actualizar(Long id, ExtraRequest solicitud) {
         Extra extra = exigirExtra(id);
 
         extra.setTipo(solicitud.tipo());
@@ -66,7 +63,7 @@ public class ExtraServiceImpl implements ExtraService {
     }
 
     @Override
-    public ExtraRespuesta cambiarEstado(Long id, boolean activo) {
+    public ExtraResponse cambiarEstado(Long id, boolean activo) {
         Extra extra = exigirExtra(id);
         extra.setActivo(activo);
         return mapearADto(extra);
@@ -77,8 +74,8 @@ public class ExtraServiceImpl implements ExtraService {
                 .orElseThrow(() -> new RecursoNoEncontradoException("Extra", id));
     }
 
-    private ExtraRespuesta mapearADto(Extra extra) {
-        return new ExtraRespuesta(
+    private ExtraResponse mapearADto(Extra extra) {
+        return new ExtraResponse(
                 extra.getId(),
                 extra.getTipo(),
                 extra.getNombre(),

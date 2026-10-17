@@ -15,17 +15,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.banduairlines.dto.admin.EstadoSolicitud;
-import com.banduairlines.dto.admin.ExtraRespuesta;
-import com.banduairlines.dto.admin.ExtraSolicitud;
+import com.banduairlines.dto.admin.EstadoRequest;
+import com.banduairlines.dto.admin.ExtraResponse;
+import com.banduairlines.dto.admin.ExtraRequest;
 import com.banduairlines.service.admin.ExtraService;
 
 import jakarta.validation.Valid;
-
-/**
- * Endpoints del módulo Administración para configurar los servicios adicionales
- * (RF-07). Solo accesible para el rol ADMINISTRADOR.
- */
 @RestController
 @RequestMapping("/api/v1/admin/extras")
 public class ExtraController {
@@ -38,32 +33,32 @@ public class ExtraController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMINISTRADOR')")
-    public List<ExtraRespuesta> listar(@RequestParam(required = false) Boolean activo) {
+    public List<ExtraResponse> listar(@RequestParam(required = false) Boolean activo) {
         return extraService.listar(activo);
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMINISTRADOR')")
-    public ExtraRespuesta obtener(@PathVariable Long id) {
+    public ExtraResponse obtener(@PathVariable Long id) {
         return extraService.obtener(id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ADMINISTRADOR')")
-    public ExtraRespuesta crear(@Valid @RequestBody ExtraSolicitud solicitud) {
+    public ExtraResponse crear(@Valid @RequestBody ExtraRequest solicitud) {
         return extraService.crear(solicitud);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMINISTRADOR')")
-    public ExtraRespuesta actualizar(@PathVariable Long id, @Valid @RequestBody ExtraSolicitud solicitud) {
+    public ExtraResponse actualizar(@PathVariable Long id, @Valid @RequestBody ExtraRequest solicitud) {
         return extraService.actualizar(id, solicitud);
     }
 
     @PatchMapping("/{id}/activo")
     @PreAuthorize("hasRole('ADMINISTRADOR')")
-    public ExtraRespuesta cambiarEstado(@PathVariable Long id, @Valid @RequestBody EstadoSolicitud solicitud) {
+    public ExtraResponse cambiarEstado(@PathVariable Long id, @Valid @RequestBody EstadoRequest solicitud) {
         return extraService.cambiarEstado(id, solicitud.activo());
     }
 }

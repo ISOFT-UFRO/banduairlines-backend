@@ -1,6 +1,6 @@
 package com.banduairlines.service.impl;
 
-import com.banduairlines.dto.admin.EquipajePackSolicitud;
+import com.banduairlines.dto.admin.EquipajePackRequest;
 import com.banduairlines.model.PackTarifario;
 import com.banduairlines.repository.PackTarifarioRepository;
 import org.junit.jupiter.api.Test;
@@ -53,7 +53,7 @@ class EquipajePackServiceImplTest {
         when(packs.saveAndFlush(pack))
                 .thenReturn(pack);
 
-        EquipajePackSolicitud solicitud = new EquipajePackSolicitud(
+        EquipajePackRequest solicitud = new EquipajePackRequest(
                 true,
                 2,
                 23);
@@ -97,7 +97,7 @@ class EquipajePackServiceImplTest {
         when(packs.findById(1L))
                 .thenReturn(Optional.of(pack));
 
-        EquipajePackSolicitud solicitud = new EquipajePackSolicitud(
+        EquipajePackRequest solicitud = new EquipajePackRequest(
                 true,
                 piezas,
                 kilos);
@@ -132,7 +132,7 @@ class EquipajePackServiceImplTest {
         when(packs.findById(999L))
                 .thenReturn(Optional.empty());
 
-        EquipajePackSolicitud solicitud = new EquipajePackSolicitud(
+        EquipajePackRequest solicitud = new EquipajePackRequest(
                 true,
                 1,
                 23);

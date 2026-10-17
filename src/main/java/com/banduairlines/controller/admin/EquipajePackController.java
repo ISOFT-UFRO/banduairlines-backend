@@ -1,7 +1,7 @@
 package com.banduairlines.controller.admin;
 
-import com.banduairlines.dto.admin.EquipajePackRespuesta;
-import com.banduairlines.dto.admin.EquipajePackSolicitud;
+import com.banduairlines.dto.admin.EquipajePackResponse;
+import com.banduairlines.dto.admin.EquipajePackRequest;
 import com.banduairlines.service.admin.EquipajePackService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
@@ -25,16 +25,16 @@ public class EquipajePackController {
     private final EquipajePackService servicio;
 
     @GetMapping
-    public EquipajePackRespuesta obtener(
+    public EquipajePackResponse obtener(
             @PathVariable @Positive Long packId) {
 
         return servicio.obtener(packId);
     }
 
     @PutMapping
-    public EquipajePackRespuesta actualizar(
+    public EquipajePackResponse actualizar(
             @PathVariable @Positive Long packId,
-            @Valid @RequestBody EquipajePackSolicitud solicitud) {
+            @Valid @RequestBody EquipajePackRequest solicitud) {
 
         return servicio.actualizar(packId, solicitud);
     }

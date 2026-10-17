@@ -21,10 +21,10 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 
-import com.banduairlines.dto.admin.EstadoRutaSolicitud;
-import com.banduairlines.dto.admin.RutaRespuesta;
-import com.banduairlines.dto.admin.RutaSolicitud;
+import com.banduairlines.dto.admin.RutaResponse;
+import com.banduairlines.dto.admin.RutaRequest;
 import com.banduairlines.service.admin.RutaService;
+import com.banduairlines.dto.admin.EstadoRutaRequest;
 
 @RestController
 @RequestMapping("/api/v1/admin/rutas")
@@ -36,12 +36,12 @@ public class RutaController {
     private final RutaService rutaService;
 
     @GetMapping("/{id}")
-    public RutaRespuesta obtener(@PathVariable @Positive Long id) {
+    public RutaResponse obtener(@PathVariable @Positive Long id) {
         return rutaService.obtener(id);
     }
 
     @GetMapping
-    public Page<RutaRespuesta> listar(
+    public Page<RutaResponse> listar(
             @RequestParam(defaultValue = "0") int pagina,
             @RequestParam(defaultValue = "20") int tamano,
             @RequestParam(required = false) Boolean activa,
@@ -55,7 +55,7 @@ public class RutaController {
     }
 
     @GetMapping("/todas")
-    public List<RutaRespuesta> listarTodas(
+    public List<RutaResponse> listarTodas(
             @RequestParam(required = false) Boolean activa,
             @RequestParam(required = false) String buscar) {
 
@@ -67,27 +67,27 @@ public class RutaController {
     }
 
     @PostMapping
-    public ResponseEntity<RutaRespuesta> crear(
-            @Valid @RequestBody RutaSolicitud solicitud) {
+    public ResponseEntity<RutaResponse> crear(
+            @Valid @RequestBody RutaRequest solicitud) {
 
-        RutaRespuesta respuesta = rutaService.crear(solicitud);
+        RutaResponse respuesta = rutaService.crear(solicitud);
         URI ubicacion = URI.create("/api/v1/admin/rutas/" + respuesta.id());
 
         return ResponseEntity.created(ubicacion).body(respuesta);
     }
 
     @PutMapping("/{id}")
-    public RutaRespuesta actualizar(
+    public RutaResponse actualizar(
             @PathVariable @Positive Long id,
-            @Valid @RequestBody RutaSolicitud solicitud) {
+            @Valid @RequestBody RutaRequest solicitud) {
 
         return rutaService.actualizar(id, solicitud);
     }
 
     @PatchMapping("/{id}/estado")
-    public RutaRespuesta cambiarEstado(
+    public RutaResponse cambiarEstado(
             @PathVariable @Positive Long id,
-            @Valid @RequestBody EstadoRutaSolicitud solicitud) {
+            @Valid @RequestBody EstadoRutaRequest solicitud) {
 
         return rutaService.cambiarEstado(id, solicitud.activa());
     }

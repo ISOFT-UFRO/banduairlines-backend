@@ -17,13 +17,15 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.banduairlines.dto.admin.PromocionRespuesta;
-import com.banduairlines.dto.admin.PromocionSolicitud;
+import com.banduairlines.dto.admin.PromocionResponse;
+import com.banduairlines.dto.admin.PromocionRequest;
 import com.banduairlines.exception.ConflictoException;
 import com.banduairlines.exception.ReglaNegocioException;
 import com.banduairlines.model.Promocion;
 import com.banduairlines.model.enums.TipoDescuento;
 import com.banduairlines.repository.PromocionRepository;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 @ExtendWith(MockitoExtension.class)
 class PromocionServiceImplTest {
@@ -49,7 +51,7 @@ class PromocionServiceImplTest {
         when(promocionRepository.existsByCodigo(CODIGO)).thenReturn(false);
         when(promocionRepository.save(any(Promocion.class))).thenAnswer(invocacion -> invocacion.getArgument(0));
 
-        PromocionRespuesta creada = promocionService.crear(solicitud());
+        PromocionResponse creada = promocionService.crear(solicitud());
         assertThat(creada.codigo()).isEqualTo(CODIGO);
         assertThat(creada.valor()).isEqualTo(VALOR);
         assertThat(creada.activa()).isTrue();
@@ -78,7 +80,7 @@ class PromocionServiceImplTest {
     void listar_cuandoSeFiltraPorActivas_retornaLasPromocionesMapeadas() {
         when(promocionRepository.listarAdministracion(true)).thenReturn(List.of(promocion()));
 
-        assertThat(promocionService.listar(true)).containsExactly(new PromocionRespuesta(ID, CODIGO,
+        assertThat(promocionService.listar(true)).containsExactly(new PromocionResponse(ID, CODIGO,
                 TipoDescuento.PORCENTAJE, VALOR, INICIO, EXPIRACION, USOS_MAXIMOS, USOS_ACTUALES, true));
     }
 
@@ -88,7 +90,7 @@ class PromocionServiceImplTest {
         when(promocionRepository.findById(ID)).thenReturn(Optional.of(existente));
         when(promocionRepository.existsByCodigoAndIdNot(CODIGO_NUEVO, ID)).thenReturn(false);
 
-        promocionService.actualizar(ID, new PromocionSolicitud(CODIGO_NUEVO, TipoDescuento.MONTO_FIJO,
+        promocionService.actualizar(ID, new PromocionRequest(CODIGO_NUEVO, TipoDescuento.MONTO_FIJO,
                 VALOR_NUEVO, INICIO, EXPIRACION, USOS_MAXIMOS));
 
         assertThat(existente.getCodigo()).isEqualTo(CODIGO_NUEVO);
@@ -106,12 +108,99 @@ class PromocionServiceImplTest {
         assertThat(promocion.getActiva()).isFalse();
     }
 
-    private PromocionSolicitud solicitud() {
+    @Test
+    void crearRechazaPorcentajeSuperiorACien() {
+        PromocionRequest solicitud = new PromocionRequest(
+                CODIGO,
+                TipoDescuento.PORCENTAJE,
+                new BigDecimal("100.01"),
+                INICIO,
+                EXPIRACION,
+                USOS_MAXIMOS);
+
+        assertThatThrownBy(() -> promocionService.crear(solicitud))
+                .isInstanceOfSatisfying(
+                        ReglaNegocioException.class,
+                        excepcion -> assertThat(excepcion.getCodigo())
+                                .isEqualTo("DESCUENTO_PORCENTUAL_INVALIDO"));
+
+        verify(promocionRepository, never()).save(any(Promocion.class));
+    }
+
+    @Test
+    void actualizarRechazaPorcentajeSuperiorACienSinModificarLaPromocion() {
+        Promocion existente = promocion();
+        when(promocionRepository.findById(ID))
+                .thenReturn(Optional.of(existente));
+
+        PromocionRequest solicitud = new PromocionRequest(
+                CODIGO_NUEVO,
+                TipoDescuento.PORCENTAJE,
+                new BigDecimal("100.01"),
+                INICIO,
+                EXPIRACION,
+                USOS_MAXIMOS);
+
+        assertThatThrownBy(() -> promocionService.actualizar(ID, solicitud))
+                .isInstanceOfSatisfying(
+                        ReglaNegocioException.class,
+                        excepcion -> assertThat(excepcion.getCodigo())
+                                .isEqualTo("DESCUENTO_PORCENTUAL_INVALIDO"));
+
+        assertThat(existente.getCodigo()).isEqualTo(CODIGO);
+        assertThat(existente.getValor()).isEqualByComparingTo(VALOR);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "PORCENTAJE, 100.00",
+            "MONTO_FIJO, 5000.00"
+    })
+    void crearAceptaElLimitePorcentualYMontoFijo(
+            TipoDescuento tipo, String valor) {
+
+        BigDecimal importe = new BigDecimal(valor);
+
+        when(promocionRepository.save(any(Promocion.class)))
+                .thenAnswer(invocacion -> invocacion.getArgument(0));
+
+        PromocionRequest solicitud = new PromocionRequest(
+                CODIGO, tipo, importe, INICIO, EXPIRACION, USOS_MAXIMOS);
+
+        PromocionResponse respuesta = promocionService.crear(solicitud);
+
+        assertThat(respuesta.tipoDescuento()).isEqualTo(tipo);
+        assertThat(respuesta.valor()).isEqualByComparingTo(importe);
+    }
+
+    @Test
+    void actualizarAceptaPorcentajeDeCien() {
+        Promocion existente = promocion();
+        when(promocionRepository.findById(ID))
+                .thenReturn(Optional.of(existente));
+
+        PromocionRequest solicitud = new PromocionRequest(
+                CODIGO_NUEVO,
+                TipoDescuento.PORCENTAJE,
+                new BigDecimal("100.00"),
+                INICIO,
+                EXPIRACION,
+                USOS_MAXIMOS);
+
+        PromocionResponse respuesta = promocionService.actualizar(ID, solicitud);
+
+        assertThat(respuesta.valor())
+                .isEqualByComparingTo(new BigDecimal("100.00"));
+        assertThat(existente.getValor())
+                .isEqualByComparingTo(new BigDecimal("100.00"));
+    }
+
+    private PromocionRequest solicitud() {
         return solicitud(INICIO, EXPIRACION);
     }
 
-    private PromocionSolicitud solicitud(LocalDateTime desde, LocalDateTime hasta) {
-        return new PromocionSolicitud(CODIGO, TipoDescuento.PORCENTAJE, VALOR, desde, hasta, USOS_MAXIMOS);
+    private PromocionRequest solicitud(LocalDateTime desde, LocalDateTime hasta) {
+        return new PromocionRequest(CODIGO, TipoDescuento.PORCENTAJE, VALOR, desde, hasta, USOS_MAXIMOS);
     }
 
     private Promocion promocion() {

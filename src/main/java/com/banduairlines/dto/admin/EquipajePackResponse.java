@@ -1,6 +1,6 @@
 package com.banduairlines.dto.admin;
 
-public record EquipajePackRespuesta(
+public record EquipajePackResponse(
     Long packId,
     String nombrePack,
     Boolean incluyeEquipajeCabina,

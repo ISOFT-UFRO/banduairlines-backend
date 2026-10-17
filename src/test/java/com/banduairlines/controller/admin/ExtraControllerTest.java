@@ -19,8 +19,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import com.banduairlines.dto.admin.ExtraRespuesta;
-import com.banduairlines.dto.admin.ExtraSolicitud;
+import com.banduairlines.dto.admin.ExtraResponse;
+import com.banduairlines.dto.admin.ExtraRequest;
 import com.banduairlines.exception.GlobalExceptionHandler;
 import com.banduairlines.model.enums.TipoExtra;
 import com.banduairlines.service.admin.ExtraService;
@@ -46,7 +46,7 @@ class ExtraControllerTest {
     @Test
     void listar_retorna200() throws Exception {
         when(extraService.listar(null)).thenReturn(List.of(
-                new ExtraRespuesta(1L, TipoExtra.ASIENTO_PREFERENTE, "Asiento Preferente", null, new BigDecimal("8000.00"), true)
+                new ExtraResponse(1L, TipoExtra.ASIENTO_PREFERENTE, "Asiento Preferente", null, new BigDecimal("8000.00"), true)
         ));
 
         mockMvc.perform(get("/api/v1/admin/extras"))
@@ -58,8 +58,8 @@ class ExtraControllerTest {
 
     @Test
     void crear_cuandoValido_retorna201() throws Exception {
-        when(extraService.crear(any(ExtraSolicitud.class)))
-                .thenReturn(new ExtraRespuesta(1L, TipoExtra.EMBARQUE_PRIORITARIO, "Embarque Prioritario", null, new BigDecimal("5000.00"), true));
+        when(extraService.crear(any(ExtraRequest.class)))
+                .thenReturn(new ExtraResponse(1L, TipoExtra.EMBARQUE_PRIORITARIO, "Embarque Prioritario", null, new BigDecimal("5000.00"), true));
 
         String json = """
                 { "tipo": "EMBARQUE_PRIORITARIO", "nombre": "Embarque Prioritario", "precio": 5000 }

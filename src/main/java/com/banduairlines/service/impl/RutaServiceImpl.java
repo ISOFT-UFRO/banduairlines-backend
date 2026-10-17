@@ -1,7 +1,7 @@
 package com.banduairlines.service.impl;
 
-import com.banduairlines.dto.admin.RutaRespuesta;
-import com.banduairlines.dto.admin.RutaSolicitud;
+import com.banduairlines.dto.admin.RutaResponse;
+import com.banduairlines.dto.admin.RutaRequest;
 import com.banduairlines.exception.ConflictoException;
 import com.banduairlines.exception.RecursoNoEncontradoException;
 import com.banduairlines.exception.ReglaNegocioException;
@@ -29,7 +29,7 @@ public class RutaServiceImpl implements RutaService {
     private final AeropuertoRepository aeropuertos;
 
     @Override
-    public Page<RutaRespuesta> listar(
+    public Page<RutaResponse> listar(
             Boolean activa, int pagina, int tamaño) {
         validarPaginacion(pagina, tamaño);
         var paginacion = PageRequest.of(pagina, tamaño, Sort.by("id").ascending());
@@ -37,13 +37,13 @@ public class RutaServiceImpl implements RutaService {
     }
 
     @Override
-    public RutaRespuesta obtener(Long id) {
+    public RutaResponse obtener(Long id) {
         return convertirRespuesta(buscarRuta(id));
     }
 
     @Override
     @Transactional
-    public RutaRespuesta crear(RutaSolicitud solicitud) {
+    public RutaResponse crear(RutaRequest solicitud) {
         validarSolicitud(solicitud, null);
 
         Ruta ruta = new Ruta();
@@ -54,7 +54,7 @@ public class RutaServiceImpl implements RutaService {
 
     @Override
     @Transactional
-    public RutaRespuesta actualizar(Long id, RutaSolicitud solicitud) {
+    public RutaResponse actualizar(Long id, RutaRequest solicitud) {
         Ruta ruta = buscarRuta(id);
 
         boolean cambiaRecorrido = !ruta.getOrigen().getId().equals(solicitud.origenId())
@@ -77,7 +77,7 @@ public class RutaServiceImpl implements RutaService {
 
     @Override
     @Transactional
-    public RutaRespuesta cambiarEstado(Long id, boolean activa) {
+    public RutaResponse cambiarEstado(Long id, boolean activa) {
         Ruta ruta = buscarRuta(id);
 
         validarDesactivacion(ruta, activa);
@@ -88,14 +88,14 @@ public class RutaServiceImpl implements RutaService {
     }
 
     @Override
-    public List<RutaRespuesta> listarTodas(Boolean activa) {
+    public List<RutaResponse> listarTodas(Boolean activa) {
         return rutas.listarTodasAdministracion(activa)
                 .stream()
                 .map(this::convertirRespuesta)
                 .toList();
     }
 
-    private void validarSolicitud(RutaSolicitud solicitud, Long excluirId) {
+    private void validarSolicitud(RutaRequest solicitud, Long excluirId) {
         if (solicitud.origenId().equals(solicitud.destinoId())) {
             throw new ReglaNegocioException("el aeropuerto de origen y destino deber ser diferentes");
         }
@@ -105,7 +105,7 @@ public class RutaServiceImpl implements RutaService {
         }
     }
 
-    public void asignarDatos(Ruta ruta, RutaSolicitud solicitud) {
+    private void asignarDatos(Ruta ruta, RutaRequest solicitud) {
         Aeropuerto origen = buscarAeropuerto(solicitud.origenId());
         Aeropuerto destino = buscarAeropuerto(solicitud.destinoId());
 
@@ -135,8 +135,8 @@ public class RutaServiceImpl implements RutaService {
         }
     }
 
-    private RutaRespuesta convertirRespuesta(Ruta ruta) {
-        return new RutaRespuesta(
+    private RutaResponse convertirRespuesta(Ruta ruta) {
+        return new RutaResponse(
                 ruta.getId(),
                 ruta.getOrigen().getId(),
                 ruta.getOrigen().getCodigoIata(),
@@ -150,7 +150,7 @@ public class RutaServiceImpl implements RutaService {
     }
 
     @Override
-    public Page<RutaRespuesta> buscar(
+    public Page<RutaResponse> buscar(
             Boolean activa, String texto, int pagina, int tamano) {
 
         validarPaginacion(pagina, tamano);
@@ -168,7 +168,7 @@ public class RutaServiceImpl implements RutaService {
     }
 
     @Override
-    public List<RutaRespuesta> buscarTodas(
+    public List<RutaResponse> buscarTodas(
             Boolean activa, String texto) {
 
         var sinPaginacion = Pageable.unpaged(

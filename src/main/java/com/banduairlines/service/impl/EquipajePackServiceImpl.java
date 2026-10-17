@@ -1,7 +1,7 @@
 package com.banduairlines.service.impl;
 
-import com.banduairlines.dto.admin.EquipajePackRespuesta;
-import com.banduairlines.dto.admin.EquipajePackSolicitud;
+import com.banduairlines.dto.admin.EquipajePackResponse;
+import com.banduairlines.dto.admin.EquipajePackRequest;
 import com.banduairlines.exception.RecursoNoEncontradoException;
 import com.banduairlines.exception.ReglaNegocioException;
 import com.banduairlines.model.PackTarifario;
@@ -19,14 +19,14 @@ public class EquipajePackServiceImpl implements EquipajePackService {
     private final PackTarifarioRepository packs;
 
     @Override
-    public EquipajePackRespuesta obtener(Long packId) {
+    public EquipajePackResponse obtener(Long packId) {
         return convertirRespuesta(buscarPack(packId));
     }
 
     @Override
     @Transactional
-    public EquipajePackRespuesta actualizar(
-            Long packId, EquipajePackSolicitud solicitud) {
+    public EquipajePackResponse actualizar(
+            Long packId, EquipajePackRequest solicitud) {
 
         PackTarifario pack = buscarPack(packId);
         validarEquipaje(solicitud);
@@ -41,7 +41,7 @@ public class EquipajePackServiceImpl implements EquipajePackService {
         return convertirRespuesta(packs.saveAndFlush(pack));
     }
 
-    private void validarEquipaje(EquipajePackSolicitud solicitud) {
+    private void validarEquipaje(EquipajePackRequest solicitud) {
         int piezas = solicitud.piezasBodegaIncluidas();
         int kilos = solicitud.kgPorPiezaBodega();
 
@@ -67,10 +67,10 @@ public class EquipajePackServiceImpl implements EquipajePackService {
                         packId));
     }
 
-    private EquipajePackRespuesta convertirRespuesta(
+    private EquipajePackResponse convertirRespuesta(
             PackTarifario pack) {
 
-        return new EquipajePackRespuesta(
+        return new EquipajePackResponse(
                 pack.getId(),
                 pack.getNombre(),
                 pack.getIncluyeEquipajeCabina(),
