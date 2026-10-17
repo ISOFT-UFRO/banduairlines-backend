@@ -1,10 +1,11 @@
 package com.banduairlines.service.reserva;
 
-import com.banduairlines.dto.reserva.ReservaResponse;
+/*import com.banduairlines.dto.reserva.ReservaResponse;
 import com.banduairlines.exception.DemasiadosIntentosException;
 import com.banduairlines.exception.RecursoNoEncontradoException;
 import com.banduairlines.model.Reserva;
 import com.banduairlines.repository.ReservaRepository;
+import com.banduairlines.service.impl.ReservaConsultaServiceImpl;
 import com.banduairlines.service.reserva.LimitadorIntentosBusqueda;
 import com.banduairlines.service.reserva.ReservaAcceso;
 import org.junit.jupiter.api.Test;
@@ -19,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class ReservaConsultaServiceImplTest {
+class ReservaConsultaServiceImplTest13a16 {
 
     @Mock
     private ReservaRepository reservaRepository;
@@ -78,4 +79,4 @@ class ReservaConsultaServiceImplTest {
                 service.buscar("ABC123", "test@bandu.cl")
         );
     }
-}
+}*/

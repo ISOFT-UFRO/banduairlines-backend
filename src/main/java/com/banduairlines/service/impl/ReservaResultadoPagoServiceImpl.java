@@ -1,6 +1,6 @@
 package com.banduairlines.service.impl;
 
-import org.slf4j.Logger;
+/*import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -79,4 +79,4 @@ public class ReservaResultadoPagoServiceImpl implements ReservaResultadoPagoServ
     private static ResultadoPagoResponse respuesta(Reserva reserva) {
         return new ResultadoPagoResponse(reserva.getId(), reserva.getEstado());
     }
-}
+}*/

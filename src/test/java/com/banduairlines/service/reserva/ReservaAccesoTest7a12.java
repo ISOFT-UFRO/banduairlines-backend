@@ -21,7 +21,7 @@ import com.banduairlines.repository.ReservaRepository;
 import com.banduairlines.security.UsuarioActual;
 
 @ExtendWith(MockitoExtension.class)
-class ReservaAccesoTest {
+class ReservaAccesoTest7a12 {
 
     @Mock private ReservaRepository reservaRepository;
     @Mock private UsuarioActual usuarioActual;
