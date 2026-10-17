@@ -1,54 +1,54 @@
 package com.banduairlines.service;
 
 import com.banduairlines.dto.cuenta.ActualizacionFidelizacion;
-import com.banduairlines.dto.cuenta.RespuestaMovimientoPuntos;
 import com.banduairlines.exception.ConflictoException;
 import com.banduairlines.exception.RecursoNoEncontradoException;
 import com.banduairlines.exception.ReglaNegocioException;
 import com.banduairlines.exception.ServicioExternoException;
 import com.banduairlines.exception.ValidacionException;
-import com.banduairlines.model.Beneficio;
-import com.banduairlines.model.CuentaFidelizacion;
-import com.banduairlines.model.Usuario;
 import com.banduairlines.model.enums.Nivel;
-import com.banduairlines.model.enums.RolUsuario;
-import com.banduairlines.persistence.cuenta.RegistroPuntos;
-import com.banduairlines.persistence.cuenta.TipoRegistroPuntos;
-import com.banduairlines.repository.BeneficioRepository;
-import com.banduairlines.repository.CuentaPuntosRepository;
-import com.banduairlines.repository.HistorialPuntosRepository;
-import com.banduairlines.repository.RegistroPuntosRepository;
+import com.banduairlines.model.enums.TipoMovimiento;
 import com.banduairlines.security.UsuarioActual;
 import com.banduairlines.service.cuenta.ActualizacionFidelizacionService;
+import com.banduairlines.service.cuenta.BeneficioConfigurado;
 import com.banduairlines.service.cuenta.CanjeService.ResultadoCanje;
+import com.banduairlines.service.cuenta.CatalogoBeneficios;
 import com.banduairlines.service.cuenta.CodigosFidelizacion;
 import com.banduairlines.service.cuenta.EvaluadorBeneficio;
+import com.banduairlines.service.cuenta.FuenteMovimientosPuntos;
+import com.banduairlines.service.cuenta.FuenteMovimientosPuntos.CanjeRegistrado;
+import com.banduairlines.service.cuenta.FuenteMovimientosPuntos.MovimientoPuntos;
+import com.banduairlines.service.cuenta.FuenteMovimientosPuntos.ResultadoRegistroCanje;
+import com.banduairlines.service.cuenta.FuenteMovimientosPuntos.SolicitudRegistroCanje;
+import com.banduairlines.service.cuenta.PropiedadesFidelizacion;
+import com.banduairlines.service.impl.AccesoMovimientosPuntos;
 import com.banduairlines.service.impl.CanjeServiceImpl;
 import com.banduairlines.service.impl.MapeadorFidelizacion;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
-import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -57,242 +57,202 @@ class CanjeServiceImplTest {
     private static final Long ID_USUARIO = 7L;
     private static final Long ID_BENEFICIO = 3L;
     private static final String CLAVE = "clave-prueba-1";
-    private static final String PREFIJO = "CANJE:clave-prueba-1:";
-    private static final Instant AHORA = Instant.parse("2026-10-16T15:00:00Z");
+    private static final Instant FECHA = Instant.parse("2026-10-16T15:00:00Z");
 
     @Mock
-    private CuentaPuntosRepository cuentas;
+    private FuenteMovimientosPuntos fuente;
     @Mock
-    private BeneficioRepository beneficios;
-    @Mock
-    private HistorialPuntosRepository historial;
-    @Mock
-    private RegistroPuntosRepository registros;
+    private AccesoMovimientosPuntos acceso;
     @Mock
     private ActualizacionFidelizacionService actualizacion;
     @Mock
     private UsuarioActual usuarioActual;
 
-    private CanjeServiceImpl servicio;
-
-    @BeforeEach
-    void setUp() {
+    private CanjeServiceImpl servicio(BeneficioConfigurado... catalogo) {
         EvaluadorBeneficio evaluador = new EvaluadorBeneficio();
-        servicio = new CanjeServiceImpl(cuentas, beneficios, historial, registros, actualizacion,
-                evaluador, usuarioActual, new MapeadorFidelizacion(beneficios, evaluador),
-                Clock.fixed(AHORA, ZoneOffset.UTC));
+        return new CanjeServiceImpl(acceso, new CatalogoBeneficios(new PropiedadesFidelizacion(List.of(catalogo))),
+                actualizacion, evaluador, usuarioActual, new MapeadorFidelizacion(evaluador));
+    }
+
+    private static BeneficioConfigurado salaVip(Nivel nivel, int costo, int stock, boolean habilitado) {
+        return new BeneficioConfigurado(ID_BENEFICIO, "Sala VIP", "Acceso a sala VIP", nivel, costo, stock, habilitado);
     }
 
     @Test
     void canjeCorrecto_registraMovimientoCanjeYDescuentaPuntos() {
-        Usuario pasajero = usuario(RolUsuario.PASAJERO);
-        prepararCuentaSinCanjePrevio(pasajero);
-        when(beneficios.findById(ID_BENEFICIO)).thenReturn(Optional.of(beneficio(Nivel.PLATA, 200, true)));
-        when(actualizacion.actualizarActual()).thenReturn(estado(Nivel.PLATA, 1000));
-        when(registros.save(any(RegistroPuntos.class))).thenAnswer(invocacion -> {
-            RegistroPuntos registro = invocacion.getArgument(0);
-            ReflectionTestUtils.setField(registro, "idRegistro", 50L);
-            return registro;
-        });
+        BeneficioConfigurado beneficio = salaVip(Nivel.PLATA, 200, 10, true);
+        prepararSinCanjePrevio(Nivel.PLATA, 1000);
+        when(fuente.contarCanjes(Set.of(ID_BENEFICIO))).thenReturn(Map.of(ID_BENEFICIO, 4L));
+        SolicitudRegistroCanje esperada = new SolicitudRegistroCanje(
+                ID_USUARIO, CLAVE, ID_BENEFICIO, "Sala VIP", 200, 10, 1000, 800);
+        when(fuente.registrarCanje(esperada)).thenReturn(nuevo(canje(50L, 200, 1000, "Sala VIP")));
 
-        ResultadoCanje resultado = servicio.canjearActual(ID_BENEFICIO, CLAVE);
+        ResultadoCanje resultado = servicio(beneficio).canjearActual(ID_BENEFICIO, CLAVE);
 
         assertTrue(resultado.creado());
         assertEquals(50L, resultado.canje().idCanje());
         assertEquals(1000, resultado.canje().saldoAnterior());
         assertEquals(200, resultado.canje().puntosDescontados());
         assertEquals(800, resultado.canje().saldoActual());
-        RespuestaMovimientoPuntos movimiento = resultado.canje().movimiento();
-        assertEquals(50L, movimiento.idMovimiento());
-        assertEquals(TipoRegistroPuntos.CANJE, movimiento.tipo());
-        assertEquals(-200, movimiento.cantidadPuntos());
-        assertEquals(ID_BENEFICIO, movimiento.idBeneficio());
-        assertEquals("Canje de Sala VIP", movimiento.descripcion());
-        assertEquals(AHORA, movimiento.fecha());
+        assertEquals(-200, resultado.canje().movimiento().cantidadPuntos());
+        assertEquals("Canje de Sala VIP", resultado.canje().movimiento().descripcion());
 
-        ArgumentCaptor<RegistroPuntos> captor = ArgumentCaptor.forClass(RegistroPuntos.class);
-        verify(registros).save(captor.capture());
-        RegistroPuntos guardado = captor.getValue();
-        assertEquals(TipoRegistroPuntos.CANJE, guardado.getTipo());
-        assertEquals(200, guardado.getCantidad());
-        assertEquals(ID_USUARIO, guardado.getIdUsuario());
-        assertEquals("CANJE:clave-prueba-1:B3", guardado.getReferencia());
-        assertEquals(AHORA, guardado.getFecha());
-        assertNull(guardado.getCodigoPNR());
+        InOrder orden = inOrder(actualizacion, fuente);
+        orden.verify(actualizacion).actualizarActual();
+        orden.verify(fuente).buscarCanje(ID_USUARIO, CLAVE);
+        orden.verify(fuente).contarCanjes(Set.of(ID_BENEFICIO));
+        orden.verify(fuente).registrarCanje(esperada);
     }
 
     @Test
     void canje_noModificaMillasNiNivel() {
-        Usuario pasajero = usuario(RolUsuario.PASAJERO);
-        CuentaFidelizacion cuenta = CuentaFidelizacion.builder()
-                .usuario(pasajero).saldoMillas(12000).nivel(Nivel.PLATA).build();
-        pasajero.setCuentaFidelizacion(cuenta);
-        prepararCuentaSinCanjePrevio(pasajero);
-        when(beneficios.findById(ID_BENEFICIO)).thenReturn(Optional.of(beneficio(Nivel.BASICO, 200, true)));
-        when(actualizacion.actualizarActual()).thenReturn(estado(Nivel.PLATA, 1000));
-        when(registros.save(any(RegistroPuntos.class))).thenAnswer(invocacion -> invocacion.getArgument(0));
+        BeneficioConfigurado beneficio = salaVip(Nivel.BASICO, 500, 10, true);
+        prepararSinCanjePrevio(Nivel.BASICO, 500);
+        when(fuente.contarCanjes(Set.of(ID_BENEFICIO))).thenReturn(Map.of());
+        when(fuente.registrarCanje(any())).thenReturn(nuevo(canje(51L, 500, 500, "Sala VIP")));
 
-        servicio.canjearActual(ID_BENEFICIO, CLAVE);
+        ResultadoCanje resultado = servicio(beneficio).canjearActual(ID_BENEFICIO, CLAVE);
 
-        assertEquals(12000, cuenta.getSaldoMillas());
-        assertEquals(Nivel.PLATA, cuenta.getNivel());
-    }
-
-    @Test
-    void puntosInsuficientes_rechazaSinRegistrar() {
-        prepararCuentaSinCanjePrevio(usuario(RolUsuario.PASAJERO));
-        when(beneficios.findById(ID_BENEFICIO)).thenReturn(Optional.of(beneficio(Nivel.BASICO, 500, true)));
-        when(actualizacion.actualizarActual()).thenReturn(estado(Nivel.BASICO, 499));
-
-        ReglaNegocioException error = assertThrows(ReglaNegocioException.class,
-                () -> servicio.canjearActual(ID_BENEFICIO, CLAVE));
-
-        assertEquals(CodigosFidelizacion.PUNTOS_INSUFICIENTES, error.getCodigo());
-        verify(registros, never()).save(any());
-    }
-
-    @Test
-    void nivelInsuficiente_rechazaSinRegistrar() {
-        prepararCuentaSinCanjePrevio(usuario(RolUsuario.PASAJERO));
-        when(beneficios.findById(ID_BENEFICIO)).thenReturn(Optional.of(beneficio(Nivel.ORO, 100, true)));
-        when(actualizacion.actualizarActual()).thenReturn(estado(Nivel.PLATA, 5000));
-
-        ReglaNegocioException error = assertThrows(ReglaNegocioException.class,
-                () -> servicio.canjearActual(ID_BENEFICIO, CLAVE));
-
-        assertEquals(CodigosFidelizacion.NIVEL_INSUFICIENTE, error.getCodigo());
-        verify(registros, never()).save(any());
+        assertEquals(0, resultado.canje().saldoActual());
+        verify(actualizacion).actualizarActual();
+        verifyNoMoreInteractions(actualizacion);
     }
 
     @Test
     void beneficioNoDisponible_rechazaSinRegistrar() {
-        prepararCuentaSinCanjePrevio(usuario(RolUsuario.PASAJERO));
-        when(beneficios.findById(ID_BENEFICIO)).thenReturn(Optional.of(beneficio(Nivel.BASICO, 100, false)));
-        when(actualizacion.actualizarActual()).thenReturn(estado(Nivel.ORO, 5000));
+        prepararSinCanjePrevio(Nivel.ORO, 9999);
+        when(fuente.contarCanjes(Set.of(ID_BENEFICIO))).thenReturn(Map.of(ID_BENEFICIO, 5L));
 
         ReglaNegocioException error = assertThrows(ReglaNegocioException.class,
-                () -> servicio.canjearActual(ID_BENEFICIO, CLAVE));
+                () -> servicio(salaVip(Nivel.BASICO, 100, 5, true)).canjearActual(ID_BENEFICIO, CLAVE));
 
         assertEquals(CodigosFidelizacion.BENEFICIO_AGOTADO, error.getCodigo());
-        verify(registros, never()).save(any());
+        verify(fuente, never()).registrarCanje(any());
+    }
+
+    @Test
+    void nivelInsuficiente_rechazaSinRegistrar() {
+        prepararSinCanjePrevio(Nivel.PLATA, 5000);
+        when(fuente.contarCanjes(Set.of(ID_BENEFICIO))).thenReturn(Map.of());
+
+        ReglaNegocioException error = assertThrows(ReglaNegocioException.class,
+                () -> servicio(salaVip(Nivel.ORO, 100, 5, true)).canjearActual(ID_BENEFICIO, CLAVE));
+
+        assertEquals(CodigosFidelizacion.NIVEL_INSUFICIENTE, error.getCodigo());
+        verify(fuente, never()).registrarCanje(any());
+    }
+
+    @Test
+    void puntosInsuficientes_rechazaSinRegistrar() {
+        prepararSinCanjePrevio(Nivel.BASICO, 499);
+        when(fuente.contarCanjes(Set.of(ID_BENEFICIO))).thenReturn(Map.of());
+
+        ReglaNegocioException error = assertThrows(ReglaNegocioException.class,
+                () -> servicio(salaVip(Nivel.BASICO, 500, 5, true)).canjearActual(ID_BENEFICIO, CLAVE));
+
+        assertEquals(CodigosFidelizacion.PUNTOS_INSUFICIENTES, error.getCodigo());
+        verify(fuente, never()).registrarCanje(any());
     }
 
     @Test
     void beneficioInexistente_responde404() {
-        prepararCuentaSinCanjePrevio(usuario(RolUsuario.PASAJERO));
-        when(beneficios.findById(ID_BENEFICIO)).thenReturn(Optional.empty());
+        prepararSinCanjePrevio(Nivel.BASICO, 1000);
 
         RecursoNoEncontradoException error = assertThrows(RecursoNoEncontradoException.class,
-                () -> servicio.canjearActual(ID_BENEFICIO, CLAVE));
+                () -> servicio().canjearActual(ID_BENEFICIO, CLAVE));
 
         assertEquals(CodigosFidelizacion.BENEFICIO_NO_ENCONTRADO, error.getCodigo());
-        verify(registros, never()).save(any());
+        verify(fuente, never()).contarCanjes(any());
+        verify(fuente, never()).registrarCanje(any());
     }
 
     @Test
     void claveRepetidaConMismoBeneficio_devuelveCanjeOriginalSinDescontarOtraVez() {
-        when(usuarioActual.exigirId()).thenReturn(ID_USUARIO);
-        when(cuentas.bloquear(ID_USUARIO)).thenReturn(Optional.of(usuario(RolUsuario.PASAJERO)));
-        RegistroPuntos anterior = registro(50L, TipoRegistroPuntos.CANJE, 200, "CANJE:clave-prueba-1:B3");
-        when(historial.findFirstByIdUsuarioAndTipoAndReferenciaStartingWith(ID_USUARIO, TipoRegistroPuntos.CANJE, PREFIJO))
-                .thenReturn(Optional.of(anterior));
-        when(beneficios.findById(ID_BENEFICIO)).thenReturn(Optional.of(beneficio(Nivel.BASICO, 200, true)));
-        // Saldo justo después del canje original, aunque el saldo de hoy sea otro.
-        when(historial.calcularSaldoHasta(ID_USUARIO, 50L)).thenReturn(800L);
+        prepararCanjePrevio(canje(50L, 200, 1000, "Sala VIP"));
 
-        ResultadoCanje resultado = servicio.canjearActual(ID_BENEFICIO, CLAVE);
+        ResultadoCanje resultado = servicio().canjearActual(ID_BENEFICIO, CLAVE);
 
         assertFalse(resultado.creado());
         assertEquals(50L, resultado.canje().idCanje());
         assertEquals(1000, resultado.canje().saldoAnterior());
-        assertEquals(200, resultado.canje().puntosDescontados());
         assertEquals(800, resultado.canje().saldoActual());
-        assertEquals(-200, resultado.canje().movimiento().cantidadPuntos());
+        assertEquals(FECHA, resultado.canje().movimiento().fecha());
         assertEquals("Canje de Sala VIP", resultado.canje().movimiento().descripcion());
-        verify(registros, never()).save(any());
-        verifyNoInteractions(actualizacion);
+        verify(fuente, never()).contarCanjes(any());
+        verify(fuente, never()).registrarCanje(any());
     }
 
     @Test
     void claveRepetidaConOtroBeneficio_respondeCanjeDuplicado() {
-        when(usuarioActual.exigirId()).thenReturn(ID_USUARIO);
-        when(cuentas.bloquear(ID_USUARIO)).thenReturn(Optional.of(usuario(RolUsuario.PASAJERO)));
-        RegistroPuntos anterior = registro(50L, TipoRegistroPuntos.CANJE, 200, "CANJE:clave-prueba-1:B9");
-        when(historial.findFirstByIdUsuarioAndTipoAndReferenciaStartingWith(ID_USUARIO, TipoRegistroPuntos.CANJE, PREFIJO))
-                .thenReturn(Optional.of(anterior));
+        prepararCanjePrevio(canje(50L, 200, 1000, "Sala VIP"));
 
         ConflictoException error = assertThrows(ConflictoException.class,
-                () -> servicio.canjearActual(ID_BENEFICIO, CLAVE));
+                () -> servicio(salaVip(Nivel.BASICO, 200, 10, true)).canjearActual(9L, CLAVE));
 
         assertEquals(CodigosFidelizacion.CANJE_DUPLICADO, error.getCodigo());
-        verify(registros, never()).save(any());
+        verify(fuente, never()).registrarCanje(any());
     }
 
     @Test
     void sinClaveIdempotencia_rechazaAntesDeTocarLaCuenta() {
-        assertThrows(ValidacionException.class, () -> servicio.canjearActual(ID_BENEFICIO, null));
-        verifyNoInteractions(cuentas, registros, actualizacion);
+        when(usuarioActual.exigirId()).thenReturn(ID_USUARIO);
+
+        assertThrows(ValidacionException.class,
+                () -> servicio(salaVip(Nivel.BASICO, 100, 5, true)).canjearActual(ID_BENEFICIO, null));
+        verify(fuente, never()).buscarCanje(any(), anyString());
+        verifyNoInteractions(acceso, actualizacion);
     }
 
     @Test
     void administrador_noParticipaEnFidelizacion() {
         when(usuarioActual.exigirId()).thenReturn(ID_USUARIO);
-        when(cuentas.bloquear(ID_USUARIO)).thenReturn(Optional.of(usuario(RolUsuario.ADMINISTRADOR)));
+        when(acceso.exigir()).thenReturn(fuente);
+        when(actualizacion.actualizarActual()).thenThrow(new AccessDeniedException("Solo pasajeros"));
 
-        assertThrows(AccessDeniedException.class, () -> servicio.canjearActual(ID_BENEFICIO, CLAVE));
-        verify(registros, never()).save(any());
+        assertThrows(AccessDeniedException.class,
+                () -> servicio(salaVip(Nivel.BASICO, 100, 5, true)).canjearActual(ID_BENEFICIO, CLAVE));
+        verifyNoInteractions(fuente);
     }
 
     @Test
     void millasNoDisponibles_sePropagaSinRegistrar() {
-        prepararCuentaSinCanjePrevio(usuario(RolUsuario.PASAJERO));
-        when(beneficios.findById(ID_BENEFICIO)).thenReturn(Optional.of(beneficio(Nivel.BASICO, 100, true)));
-        when(actualizacion.actualizarActual()).thenThrow(
-                new ServicioExternoException("Sin historial de vuelos").conCodigo(CodigosFidelizacion.MILLAS_NO_DISPONIBLES));
+        when(usuarioActual.exigirId()).thenReturn(ID_USUARIO);
+        when(acceso.exigir()).thenReturn(fuente);
+        when(actualizacion.actualizarActual()).thenThrow(new ServicioExternoException("Sin historial de vuelos")
+                .conCodigo(CodigosFidelizacion.MILLAS_NO_DISPONIBLES));
 
         ServicioExternoException error = assertThrows(ServicioExternoException.class,
-                () -> servicio.canjearActual(ID_BENEFICIO, CLAVE));
+                () -> servicio(salaVip(Nivel.BASICO, 100, 5, true)).canjearActual(ID_BENEFICIO, CLAVE));
 
         assertEquals(CodigosFidelizacion.MILLAS_NO_DISPONIBLES, error.getCodigo());
-        verify(registros, never()).save(any());
+        verifyNoInteractions(fuente);
     }
 
-    private void prepararCuentaSinCanjePrevio(Usuario usuario) {
+    private void prepararSinCanjePrevio(Nivel nivel, long saldo) {
         when(usuarioActual.exigirId()).thenReturn(ID_USUARIO);
-        when(cuentas.bloquear(ID_USUARIO)).thenReturn(Optional.of(usuario));
-        when(historial.findFirstByIdUsuarioAndTipoAndReferenciaStartingWith(ID_USUARIO, TipoRegistroPuntos.CANJE, PREFIJO))
-                .thenReturn(Optional.empty());
+        when(acceso.exigir()).thenReturn(fuente);
+        when(actualizacion.actualizarActual()).thenReturn(estado(nivel, saldo));
+        when(fuente.buscarCanje(ID_USUARIO, CLAVE)).thenReturn(Optional.empty());
     }
 
-    private static Usuario usuario(RolUsuario rol) {
-        return Usuario.builder()
-                .id(ID_USUARIO)
-                .email("pasajero@bandu.cl")
-                .passwordHash("hash")
-                .nombre("Ana")
-                .apellido("Pérez")
-                .rol(rol)
-                .activo(true)
-                .build();
+    private void prepararCanjePrevio(CanjeRegistrado anterior) {
+        when(usuarioActual.exigirId()).thenReturn(ID_USUARIO);
+        when(acceso.exigir()).thenReturn(fuente);
+        when(actualizacion.actualizarActual()).thenReturn(estado(Nivel.BASICO, 800));
+        when(fuente.buscarCanje(ID_USUARIO, CLAVE)).thenReturn(Optional.of(anterior));
     }
 
-    private static Beneficio beneficio(Nivel nivel, int costo, boolean disponible) {
-        return Beneficio.builder()
-                .idBeneficio(ID_BENEFICIO)
-                .nombre("Sala VIP")
-                .nivelRequerido(nivel)
-                .costoPuntos(costo)
-                .disponible(disponible)
-                .build();
+    private static ResultadoRegistroCanje nuevo(CanjeRegistrado canje) {
+        return new ResultadoRegistroCanje(canje, true);
     }
 
     private static ActualizacionFidelizacion estado(Nivel nivel, long saldo) {
         return new ActualizacionFidelizacion(new BigDecimal("12000"), saldo, nivel, BigDecimal.ONE);
     }
 
-    private static RegistroPuntos registro(Long id, TipoRegistroPuntos tipo, long cantidad, String referencia) {
-        RegistroPuntos registro = new RegistroPuntos(ID_USUARIO, tipo, cantidad, AHORA, referencia, null);
-        ReflectionTestUtils.setField(registro, "idRegistro", id);
-        return registro;
+    private static CanjeRegistrado canje(Long id, long costo, long saldoAnterior, String nombre) {
+        MovimientoPuntos movimiento = new MovimientoPuntos(id, TipoMovimiento.CANJE, costo, FECHA,
+                "Canje de " + nombre, null, ID_BENEFICIO);
+        return new CanjeRegistrado(movimiento, nombre, saldoAnterior, saldoAnterior - costo);
     }
 }

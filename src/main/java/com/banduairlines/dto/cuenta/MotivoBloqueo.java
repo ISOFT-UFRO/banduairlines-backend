@@ -1,5 +1,4 @@
-package com.banduairlines.model.enums;
-
+package com.banduairlines.dto.cuenta;
 
 public enum MotivoBloqueo {
     BENEFICIO_AGOTADO,

@@ -1,142 +1,133 @@
 package com.banduairlines.service.impl;
 
 import com.banduairlines.dto.cuenta.ActualizacionFidelizacion;
-import com.banduairlines.dto.cuenta.RespuestaCanje;
+import com.banduairlines.dto.cuenta.MotivoBloqueo;
 import com.banduairlines.exception.ConflictoException;
 import com.banduairlines.exception.RecursoNoEncontradoException;
 import com.banduairlines.exception.ReglaNegocioException;
 import com.banduairlines.exception.ValidacionException;
-import com.banduairlines.model.Beneficio;
-import com.banduairlines.model.Usuario;
-import com.banduairlines.model.enums.MotivoBloqueo;
-import com.banduairlines.persistence.cuenta.RegistroPuntos;
-import com.banduairlines.persistence.cuenta.TipoRegistroPuntos;
-import com.banduairlines.repository.BeneficioRepository;
-import com.banduairlines.repository.CuentaPuntosRepository;
-import com.banduairlines.repository.HistorialPuntosRepository;
-import com.banduairlines.repository.RegistroPuntosRepository;
 import com.banduairlines.security.UsuarioActual;
 import com.banduairlines.service.cuenta.ActualizacionFidelizacionService;
+import com.banduairlines.service.cuenta.BeneficioConfigurado;
 import com.banduairlines.service.cuenta.CanjeService;
+import com.banduairlines.service.cuenta.CatalogoBeneficios;
 import com.banduairlines.service.cuenta.CodigosFidelizacion;
 import com.banduairlines.service.cuenta.EvaluadorBeneficio;
-import com.banduairlines.service.cuenta.ReferenciaCanje;
-import com.banduairlines.service.cuenta.RegistroPuntosService;
+import com.banduairlines.service.cuenta.FuenteMovimientosPuntos;
+import com.banduairlines.service.cuenta.FuenteMovimientosPuntos.CanjeRegistrado;
+import com.banduairlines.service.cuenta.FuenteMovimientosPuntos.ResultadoRegistroCanje;
+import com.banduairlines.service.cuenta.FuenteMovimientosPuntos.SolicitudRegistroCanje;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Clock;
 import java.util.Optional;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 @Service
 public class CanjeServiceImpl implements CanjeService {
 
-    private final CuentaPuntosRepository cuentas;
-    private final BeneficioRepository beneficios;
-    private final HistorialPuntosRepository historial;
-    private final RegistroPuntosRepository registros;
+    static final int LARGO_MINIMO_CLAVE = 8;
+    static final int LARGO_MAXIMO_CLAVE = 40;
+    private static final Pattern FORMATO_CLAVE =
+            Pattern.compile("[A-Za-z0-9-]{" + LARGO_MINIMO_CLAVE + "," + LARGO_MAXIMO_CLAVE + "}");
+
+    private final AccesoMovimientosPuntos movimientos;
+    private final CatalogoBeneficios catalogo;
     private final ActualizacionFidelizacionService actualizacion;
     private final EvaluadorBeneficio evaluador;
     private final UsuarioActual usuarioActual;
     private final MapeadorFidelizacion mapeador;
-    private final Clock reloj;
 
-    public CanjeServiceImpl(CuentaPuntosRepository cuentas, BeneficioRepository beneficios,
-                            HistorialPuntosRepository historial, RegistroPuntosRepository registros,
+    public CanjeServiceImpl(AccesoMovimientosPuntos movimientos, CatalogoBeneficios catalogo,
                             ActualizacionFidelizacionService actualizacion, EvaluadorBeneficio evaluador,
-                            UsuarioActual usuarioActual, MapeadorFidelizacion mapeador, Clock reloj) {
-        this.cuentas = cuentas;
-        this.beneficios = beneficios;
-        this.historial = historial;
-        this.registros = registros;
+                            UsuarioActual usuarioActual, MapeadorFidelizacion mapeador) {
+        this.movimientos = movimientos;
+        this.catalogo = catalogo;
         this.actualizacion = actualizacion;
         this.evaluador = evaluador;
         this.usuarioActual = usuarioActual;
         this.mapeador = mapeador;
-        this.reloj = reloj;
     }
 
     /**
-     * Registra un movimiento CANJE. No modifica millas ni baja el nivel.
-     * <p>
-     * La cuenta queda bloqueada (PESSIMISTIC_WRITE) hasta el fin de la transacción, así dos canjes
-     * simultáneos del mismo pasajero se ejecutan uno después del otro y el saldo nunca queda negativo.
-     * Las acumulaciones de puntos toman el mismo bloqueo.
+     * Valida el canje y calcula el descuento; el registro persistente y atómico lo hace {@link FuenteMovimientosPuntos}.
+     * El estado de fidelización (saldo y nivel) viene de ActualizacionFidelizacionService, que también verifica que
+     * la cuenta sea de un pasajero activo. No modifica millas ni nivel.
      */
     @Override
     @Transactional
     public ResultadoCanje canjearActual(Long idBeneficio, String claveIdempotencia) {
-        String clave = ReferenciaCanje.validarClave(claveIdempotencia);
+        Long idUsuario = usuarioActual.exigirId();
         if (idBeneficio == null || idBeneficio <= 0) {
             throw new ValidacionException("El idBeneficio debe ser un número positivo");
         }
-        Long idUsuario = usuarioActual.exigirId();
-        Usuario usuario = cuentas.bloquear(idUsuario).orElseThrow(RegistroPuntosService::cuentaNoEncontrada);
-        RegistroPuntosService.exigirPasajero(usuario);
+        String clave = validarClave(claveIdempotencia);
+        FuenteMovimientosPuntos fuente = movimientos.exigir();
+        ActualizacionFidelizacion estado = actualizacion.actualizarActual();
 
-        Optional<RegistroPuntos> anterior = historial.findFirstByIdUsuarioAndTipoAndReferenciaStartingWith(
-                idUsuario, TipoRegistroPuntos.CANJE, ReferenciaCanje.prefijo(clave));
+        Optional<CanjeRegistrado> anterior = fuente.buscarCanje(idUsuario, clave);
         if (anterior.isPresent()) {
-            return canjeRepetido(anterior.get(), idBeneficio, idUsuario);
+            return reintento(anterior.get(), idBeneficio);
         }
 
-        Beneficio beneficio = beneficios.findById(idBeneficio).orElseThrow(() ->
+        BeneficioConfigurado beneficio = catalogo.buscar(idBeneficio).orElseThrow(() ->
                 new RecursoNoEncontradoException("Beneficio", idBeneficio)
                         .conCodigo(CodigosFidelizacion.BENEFICIO_NO_ENCONTRADO));
-        if (beneficio.getCostoPuntos() == null || beneficio.getCostoPuntos() <= 0) {
-            throw new ReglaNegocioException("El beneficio no tiene un costo en puntos válido");
+        if (!beneficio.estaHabilitado()) {
+            throw rechazo(MotivoBloqueo.BENEFICIO_AGOTADO);
         }
 
-        ActualizacionFidelizacion estado = actualizacion.actualizarActual();
-        Optional<MotivoBloqueo> motivo = evaluador.evaluar(beneficio, estado.nivelActual(), estado.saldoPuntos());
+        long canjes = fuente.contarCanjes(Set.of(beneficio.id())).getOrDefault(beneficio.id(), 0L);
+        Optional<MotivoBloqueo> motivo = evaluador.evaluar(
+                beneficio, estado.nivelActual(), estado.saldoPuntos(), beneficio.stockInicial() - canjes);
         if (motivo.isPresent()) {
-            throw new ReglaNegocioException(mensaje(motivo.get())).conCodigo(motivo.get().name());
+            throw rechazo(motivo.get());
         }
 
-        RegistroPuntos canje = registros.save(new RegistroPuntos(
-                idUsuario,
-                TipoRegistroPuntos.CANJE,
-                beneficio.getCostoPuntos(),
-                reloj.instant(),
-                ReferenciaCanje.crear(clave, idBeneficio),
-                null
-        ));
         long saldoAnterior = estado.saldoPuntos();
-        return new ResultadoCanje(respuesta(canje, saldoAnterior, beneficio.getNombre()), true);
+        long saldoPosterior = Math.subtractExact(saldoAnterior, beneficio.costoPuntos());
+        ResultadoRegistroCanje resultado = fuente.registrarCanje(new SolicitudRegistroCanje(
+                idUsuario, clave, beneficio.id(), beneficio.nombre(), beneficio.costoPuntos(),
+                beneficio.stockInicial(), saldoAnterior, saldoPosterior));
+        if (!resultado.creado()) {
+            return reintento(resultado.canje(), idBeneficio);
+        }
+        return new ResultadoCanje(mapeador.canje(resultado.canje()), true);
     }
 
     /**
-     * La misma clave con el mismo beneficio devuelve la misma respuesta del canje original
-     * (mismo idCanje, mismos saldos y mismo movimiento) sin registrar otro ni descontar otra vez.
+     * La misma clave con el mismo beneficio devuelve el canje original tal como quedó registrado (mismo idCanje,
+     * saldos, fecha y nombre), sin consultar el catálogo actual ni descontar otra vez.
      * La misma clave con otro beneficio es un conflicto.
      */
-    private ResultadoCanje canjeRepetido(RegistroPuntos anterior, Long idBeneficio, Long idUsuario) {
-        Long idBeneficioAnterior = ReferenciaCanje.idBeneficio(anterior.getReferencia()).orElse(null);
-        if (!idBeneficio.equals(idBeneficioAnterior)) {
+    private ResultadoCanje reintento(CanjeRegistrado anterior, Long idBeneficio) {
+        if (!idBeneficio.equals(anterior.movimiento().idBeneficio())) {
             throw new ConflictoException("La Clave-Idempotencia ya se usó para canjear otro beneficio")
                     .conCodigo(CodigosFidelizacion.CANJE_DUPLICADO);
         }
-        String nombre = beneficios.findById(idBeneficio).map(Beneficio::getNombre).orElse(null);
-        long saldoDespues = historial.calcularSaldoHasta(idUsuario, anterior.getIdRegistro());
-        long saldoAnterior = saldoDespues + anterior.getCantidad();
-        return new ResultadoCanje(respuesta(anterior, saldoAnterior, nombre), false);
+        return new ResultadoCanje(mapeador.canje(anterior), false);
     }
 
-    private RespuestaCanje respuesta(RegistroPuntos canje, long saldoAnterior, String nombreBeneficio) {
-        return new RespuestaCanje(
-                canje.getIdRegistro(),
-                saldoAnterior,
-                canje.getCantidad(),
-                saldoAnterior - canje.getCantidad(),
-                mapeador.movimientoCanje(canje, nombreBeneficio)
-        );
+    /** Valida la cabecera Clave-Idempotencia y la devuelve sin espacios en los extremos. */
+    static String validarClave(String clave) {
+        if (clave == null || clave.isBlank()) {
+            throw new ValidacionException("El encabezado Clave-Idempotencia es obligatorio");
+        }
+        String limpia = clave.trim();
+        if (!FORMATO_CLAVE.matcher(limpia).matches()) {
+            throw new ValidacionException("La Clave-Idempotencia debe tener entre " + LARGO_MINIMO_CLAVE + " y "
+                    + LARGO_MAXIMO_CLAVE + " caracteres: letras, números o guiones");
+        }
+        return limpia;
     }
 
-    private static String mensaje(MotivoBloqueo motivo) {
-        return switch (motivo) {
+    private static ReglaNegocioException rechazo(MotivoBloqueo motivo) {
+        String mensaje = switch (motivo) {
             case BENEFICIO_AGOTADO -> "El beneficio no está disponible";
             case NIVEL_INSUFICIENTE -> "Tu nivel no alcanza para este beneficio";
             case PUNTOS_INSUFICIENTES -> "No tienes puntos suficientes para este beneficio";
         };
+        return new ReglaNegocioException(mensaje).conCodigo(motivo.name());
     }
 }

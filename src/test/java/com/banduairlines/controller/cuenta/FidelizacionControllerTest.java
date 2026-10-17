@@ -9,7 +9,7 @@ import com.banduairlines.exception.GlobalExceptionHandler;
 import com.banduairlines.exception.ServicioExternoException;
 import com.banduairlines.exception.ValidacionException;
 import com.banduairlines.model.enums.Nivel;
-import com.banduairlines.persistence.cuenta.TipoRegistroPuntos;
+import com.banduairlines.model.enums.TipoMovimiento;
 import com.banduairlines.service.cuenta.CodigosFidelizacion;
 import com.banduairlines.service.cuenta.FidelizacionService;
 import org.junit.jupiter.api.BeforeEach;
@@ -75,7 +75,7 @@ class FidelizacionControllerTest {
     @Test
     void movimientos_pasaLaPaginaYElTamano() throws Exception {
         RespuestaMovimientoPuntos movimiento = new RespuestaMovimientoPuntos(
-                51L, TipoRegistroPuntos.CANJE, -200, null, "Canje de Sala VIP", null, 3L);
+                51L, TipoMovimiento.CANJE, -200, null, "Canje de Sala VIP", null, 3L);
         when(fidelizacionService.listarMovimientosActual(1, 5))
                 .thenReturn(new RespuestaPaginada<>(List.of(movimiento), 1, 5, 6, 2));
 

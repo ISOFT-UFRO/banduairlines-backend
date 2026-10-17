@@ -2,7 +2,7 @@ package com.banduairlines.controller.cuenta;
 
 import com.banduairlines.dto.cuenta.RespuestaBeneficio;
 import com.banduairlines.exception.GlobalExceptionHandler;
-import com.banduairlines.model.enums.MotivoBloqueo;
+import com.banduairlines.dto.cuenta.MotivoBloqueo;
 import com.banduairlines.model.enums.Nivel;
 import com.banduairlines.service.cuenta.CatalogoBeneficioService;
 import org.junit.jupiter.api.BeforeEach;

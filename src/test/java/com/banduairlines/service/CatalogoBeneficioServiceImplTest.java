@@ -2,15 +2,17 @@ package com.banduairlines.service;
 
 import com.banduairlines.dto.cuenta.ActualizacionFidelizacion;
 import com.banduairlines.dto.cuenta.RespuestaBeneficio;
-import com.banduairlines.model.Beneficio;
-import com.banduairlines.model.enums.MotivoBloqueo;
+import com.banduairlines.dto.cuenta.MotivoBloqueo;
 import com.banduairlines.model.enums.Nivel;
-import com.banduairlines.repository.BeneficioRepository;
 import com.banduairlines.service.cuenta.ActualizacionFidelizacionService;
+import com.banduairlines.service.cuenta.BeneficioConfigurado;
+import com.banduairlines.service.cuenta.CatalogoBeneficios;
 import com.banduairlines.service.cuenta.EvaluadorBeneficio;
+import com.banduairlines.service.cuenta.PropiedadesFidelizacion;
+import com.banduairlines.service.cuenta.FuenteMovimientosPuntos;
+import com.banduairlines.service.impl.AccesoMovimientosPuntos;
 import com.banduairlines.service.impl.CatalogoBeneficioServiceImpl;
 import com.banduairlines.service.impl.MapeadorFidelizacion;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -19,6 +21,8 @@ import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -33,51 +37,52 @@ class CatalogoBeneficioServiceImplTest {
     @Mock
     private ActualizacionFidelizacionService actualizacion;
     @Mock
-    private BeneficioRepository beneficios;
+    private FuenteMovimientosPuntos fuente;
+    @Mock
+    private AccesoMovimientosPuntos acceso;
 
-    private CatalogoBeneficioServiceImpl servicio;
-
-    @BeforeEach
-    void setUp() {
-        servicio = new CatalogoBeneficioServiceImpl(actualizacion, beneficios,
-                new MapeadorFidelizacion(beneficios, new EvaluadorBeneficio()));
+    private CatalogoBeneficioServiceImpl servicio(BeneficioConfigurado... beneficios) {
+        return new CatalogoBeneficioServiceImpl(actualizacion,
+                new CatalogoBeneficios(new PropiedadesFidelizacion(List.of(beneficios))),
+                acceso, new MapeadorFidelizacion(new EvaluadorBeneficio()));
     }
 
     @Test
     void catalogo_indicaDisponibilidadYMotivoDeBloqueo() {
         when(actualizacion.actualizarActual()).thenReturn(
                 new ActualizacionFidelizacion(BigDecimal.ZERO, 300, Nivel.BASICO, BigDecimal.ONE));
-        when(beneficios.findAllByOrderByCostoPuntosAscNombreAsc()).thenReturn(List.of(
-                beneficio(1L, Nivel.BASICO, 100, true),
-                beneficio(2L, Nivel.PLATA, 100, true),
-                beneficio(3L, Nivel.BASICO, 500, true),
-                beneficio(4L, Nivel.BASICO, 50, false)));
+        when(acceso.exigir()).thenReturn(fuente);
+        when(fuente.contarCanjes(Set.of(1L, 2L, 3L, 5L))).thenReturn(Map.of(5L, 10L));
 
-        List<RespuestaBeneficio> catalogo = servicio.listarActual();
+        List<RespuestaBeneficio> catalogo = servicio(
+                new BeneficioConfigurado(1L, "Equipaje extra", null, Nivel.BASICO, 100, 10, true),
+                new BeneficioConfigurado(2L, "Upgrade", null, Nivel.PLATA, 110, 10, true),
+                new BeneficioConfigurado(3L, "Asiento", null, Nivel.BASICO, 500, 10, true),
+                new BeneficioConfigurado(4L, "Kit de viaje", null, Nivel.BASICO, 50, 10, false),
+                new BeneficioConfigurado(5L, "Snack", null, Nivel.BASICO, 60, 10, true)).listarActual();
 
-        assertEquals(4, catalogo.size());
-        assertTrue(catalogo.get(0).disponible());
-        assertNull(catalogo.get(0).motivoBloqueo());
-        assertFalse(catalogo.get(1).disponible());
-        assertEquals(MotivoBloqueo.NIVEL_INSUFICIENTE, catalogo.get(1).motivoBloqueo());
-        assertEquals(MotivoBloqueo.PUNTOS_INSUFICIENTES, catalogo.get(2).motivoBloqueo());
-        assertEquals(MotivoBloqueo.BENEFICIO_AGOTADO, catalogo.get(3).motivoBloqueo());
+        assertEquals(5, catalogo.size());
+        RespuestaBeneficio kit = buscar(catalogo, 4L);
+        RespuestaBeneficio snack = buscar(catalogo, 5L);
+        RespuestaBeneficio equipaje = buscar(catalogo, 1L);
+        assertEquals(MotivoBloqueo.BENEFICIO_AGOTADO, kit.motivoBloqueo());
+        assertEquals(MotivoBloqueo.BENEFICIO_AGOTADO, snack.motivoBloqueo());
+        assertTrue(equipaje.disponible());
+        assertNull(equipaje.motivoBloqueo());
+        assertEquals(MotivoBloqueo.NIVEL_INSUFICIENTE, buscar(catalogo, 2L).motivoBloqueo());
+        assertEquals(MotivoBloqueo.PUNTOS_INSUFICIENTES, buscar(catalogo, 3L).motivoBloqueo());
+        assertFalse(buscar(catalogo, 3L).disponible());
     }
 
     @Test
     void catalogo_rechazaRolesQueNoParticipan() {
         when(actualizacion.actualizarActual()).thenThrow(new AccessDeniedException("Solo pasajeros"));
 
-        assertThrows(AccessDeniedException.class, () -> servicio.listarActual());
+        assertThrows(AccessDeniedException.class, () -> servicio(
+                new BeneficioConfigurado(1L, "Equipaje extra", null, Nivel.BASICO, 100, 10, true)).listarActual());
     }
 
-    private static Beneficio beneficio(Long id, Nivel nivel, int costo, boolean disponible) {
-        return Beneficio.builder()
-                .idBeneficio(id)
-                .nombre("Beneficio " + id)
-                .nivelRequerido(nivel)
-                .costoPuntos(costo)
-                .disponible(disponible)
-                .build();
+    private static RespuestaBeneficio buscar(List<RespuestaBeneficio> catalogo, Long id) {
+        return catalogo.stream().filter(b -> b.idBeneficio().equals(id)).findFirst().orElseThrow();
     }
 }

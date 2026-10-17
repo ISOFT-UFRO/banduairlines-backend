@@ -1,99 +1,86 @@
 package com.banduairlines.service.impl;
 
 import com.banduairlines.dto.cuenta.RespuestaBeneficio;
+import com.banduairlines.dto.cuenta.RespuestaCanje;
 import com.banduairlines.dto.cuenta.RespuestaMovimientoPuntos;
-import com.banduairlines.model.Beneficio;
-import com.banduairlines.model.enums.MotivoBloqueo;
+import com.banduairlines.dto.cuenta.MotivoBloqueo;
 import com.banduairlines.model.enums.Nivel;
-import com.banduairlines.persistence.cuenta.RegistroPuntos;
-import com.banduairlines.persistence.cuenta.TipoRegistroPuntos;
-import com.banduairlines.repository.BeneficioRepository;
+import com.banduairlines.model.enums.TipoMovimiento;
+import com.banduairlines.service.cuenta.BeneficioConfigurado;
 import com.banduairlines.service.cuenta.EvaluadorBeneficio;
-import com.banduairlines.service.cuenta.ReferenciaCanje;
+import com.banduairlines.service.cuenta.FuenteMovimientosPuntos.CanjeRegistrado;
+import com.banduairlines.service.cuenta.FuenteMovimientosPuntos.MovimientoPuntos;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Component
 public class MapeadorFidelizacion {
 
-    private static final String PREFIJO_VUELO = "VUELO:";
-
-    private final BeneficioRepository beneficios;
     private final EvaluadorBeneficio evaluador;
 
-    public MapeadorFidelizacion(BeneficioRepository beneficios, EvaluadorBeneficio evaluador) {
-        this.beneficios = beneficios;
+    public MapeadorFidelizacion(EvaluadorBeneficio evaluador) {
         this.evaluador = evaluador;
     }
 
-    public RespuestaBeneficio beneficio(Beneficio beneficio, Nivel nivelUsuario, long saldoPuntos) {
-        MotivoBloqueo motivo = evaluador.evaluar(beneficio, nivelUsuario, saldoPuntos).orElse(null);
+    public RespuestaBeneficio beneficio(BeneficioConfigurado beneficio, Nivel nivelUsuario,
+                                        long saldoPuntos, long stockRestante) {
+        MotivoBloqueo motivo = evaluador.evaluar(beneficio, nivelUsuario, saldoPuntos, stockRestante).orElse(null);
         return new RespuestaBeneficio(
-                beneficio.getIdBeneficio(),
-                beneficio.getNombre(),
-                beneficio.getDescripcion(),
-                beneficio.getNivelRequerido(),
-                beneficio.getCostoPuntos(),
+                beneficio.id(),
+                beneficio.nombre(),
+                beneficio.descripcion(),
+                beneficio.nivelRequerido(),
+                beneficio.costoPuntos(),
                 motivo == null,
                 motivo
         );
     }
 
-    public List<RespuestaMovimientoPuntos> movimientos(List<RegistroPuntos> registros) {
-        Set<Long> idsBeneficio = registros.stream()
-                .map(registro -> ReferenciaCanje.idBeneficio(registro.getReferencia()))
-                .flatMap(Optional::stream)
-                .collect(Collectors.toSet());
-        Map<Long, String> nombres = idsBeneficio.isEmpty()
-                ? Map.of()
-                : beneficios.findAllById(idsBeneficio).stream()
-                        .collect(Collectors.toMap(Beneficio::getIdBeneficio, Beneficio::getNombre));
-        return registros.stream()
-                .map(registro -> {
-                    Long idBeneficio = ReferenciaCanje.idBeneficio(registro.getReferencia()).orElse(null);
-                    return movimiento(registro, idBeneficio == null ? null : nombres.get(idBeneficio));
-                })
+    /**
+     * Evalúa cada beneficio con el stock restante: stock inicial menos los canjes registrados.
+     *
+     * @param canjesPorBeneficio canjes registrados por id de beneficio; los ausentes cuentan como cero
+     */
+    public List<RespuestaBeneficio> beneficios(List<BeneficioConfigurado> beneficios, Nivel nivelUsuario,
+                                               long saldoPuntos, Map<Long, Long> canjesPorBeneficio) {
+        return beneficios.stream()
+                .map(beneficio -> beneficio(beneficio, nivelUsuario, saldoPuntos,
+                        beneficio.stockInicial() - canjesPorBeneficio.getOrDefault(beneficio.id(), 0L)))
                 .toList();
     }
 
-    /** Movimiento de un canje recién registrado, cuando ya se conoce el nombre del beneficio. */
-    public RespuestaMovimientoPuntos movimientoCanje(RegistroPuntos canje, String nombreBeneficio) {
-        return movimiento(canje, nombreBeneficio);
+    public List<RespuestaMovimientoPuntos> movimientos(List<MovimientoPuntos> movimientos) {
+        return movimientos.stream().map(this::movimiento).toList();
     }
 
     /**
-     * En la base la cantidad siempre es positiva y el tipo indica si suma o resta.
+     * La cantidad llega siempre positiva y el tipo indica si suma o resta.
      * En la API, cantidadPuntos lleva el signo: positivo al acumular y negativo al canjear.
      */
-    private static RespuestaMovimientoPuntos movimiento(RegistroPuntos registro, String nombreBeneficio) {
-        Long idBeneficio = ReferenciaCanje.idBeneficio(registro.getReferencia()).orElse(null);
-        long cantidadPuntos = registro.getTipo() == TipoRegistroPuntos.CANJE
-                ? -registro.getCantidad()
-                : registro.getCantidad();
+    public RespuestaMovimientoPuntos movimiento(MovimientoPuntos movimiento) {
+        long cantidadPuntos = movimiento.tipo() == TipoMovimiento.CANJE
+                ? -movimiento.cantidad()
+                : movimiento.cantidad();
         return new RespuestaMovimientoPuntos(
-                registro.getIdRegistro(),
-                registro.getTipo(),
+                movimiento.idMovimiento(),
+                movimiento.tipo(),
                 cantidadPuntos,
-                registro.getFecha(),
-                descripcion(registro, nombreBeneficio),
-                registro.getCodigoPNR(),
-                idBeneficio
+                movimiento.fecha(),
+                movimiento.descripcion(),
+                movimiento.codigoPNR(),
+                movimiento.idBeneficio()
         );
     }
 
-    private static String descripcion(RegistroPuntos registro, String nombreBeneficio) {
-        if (registro.getTipo() == TipoRegistroPuntos.CANJE) {
-            return nombreBeneficio == null ? "Canje de beneficio" : "Canje de " + nombreBeneficio;
-        }
-        String referencia = registro.getReferencia();
-        if (referencia != null && referencia.startsWith(PREFIJO_VUELO)) {
-            return "Acumulación por vuelo " + referencia.substring(PREFIJO_VUELO.length());
-        }
-        return "Acumulación de puntos";
+    public RespuestaCanje canje(CanjeRegistrado canje) {
+        return new RespuestaCanje(
+                canje.movimiento().idMovimiento(),
+                canje.saldoAnterior(),
+                canje.movimiento().cantidad(),
+                canje.saldoPosterior(),
+                movimiento(canje.movimiento())
+        );
     }
 }

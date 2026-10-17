@@ -44,7 +44,7 @@ public class FidelizacionController {
             @ApiResponse(responseCode = "401", description = "NO_AUTENTICADO", content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "403", description = "ACCESO_DENEGADO: el rol no participa en fidelización", content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "404", description = "CUENTA_NO_ENCONTRADA", content = @Content(schema = @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "502", description = "MILLAS_NO_DISPONIBLES", content = @Content(schema = @Schema(implementation = ApiError.class)))
+            @ApiResponse(responseCode = "502", description = "MILLAS_NO_DISPONIBLES o MOVIMIENTOS_NO_DISPONIBLES", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     public RespuestaFidelizacion consultar() {
         return fidelizacionService.consultarActual();
@@ -61,7 +61,8 @@ public class FidelizacionController {
             @ApiResponse(responseCode = "400", description = "VALIDACION: página o tamaño fuera de rango", content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "401", description = "NO_AUTENTICADO", content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "403", description = "ACCESO_DENEGADO: el rol no participa en fidelización", content = @Content(schema = @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "404", description = "CUENTA_NO_ENCONTRADA", content = @Content(schema = @Schema(implementation = ApiError.class)))
+            @ApiResponse(responseCode = "404", description = "CUENTA_NO_ENCONTRADA", content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "502", description = "MOVIMIENTOS_NO_DISPONIBLES", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     public RespuestaPaginada<RespuestaMovimientoPuntos> listarMovimientos(
             @Parameter(description = "Número de página, desde 0")

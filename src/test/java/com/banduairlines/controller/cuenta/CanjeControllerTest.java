@@ -7,7 +7,7 @@ import com.banduairlines.exception.ConflictoException;
 import com.banduairlines.exception.GlobalExceptionHandler;
 import com.banduairlines.exception.ReglaNegocioException;
 import com.banduairlines.exception.ValidacionException;
-import com.banduairlines.persistence.cuenta.TipoRegistroPuntos;
+import com.banduairlines.model.enums.TipoMovimiento;
 import com.banduairlines.service.cuenta.CanjeService;
 import com.banduairlines.service.cuenta.CanjeService.ResultadoCanje;
 import com.banduairlines.service.cuenta.CodigosFidelizacion;
@@ -133,6 +133,6 @@ class CanjeControllerTest {
 
     private static RespuestaCanje respuestaCanje() {
         return new RespuestaCanje(50L, 1000, 200, 800, new RespuestaMovimientoPuntos(
-                50L, TipoRegistroPuntos.CANJE, -200, null, "Canje de Sala VIP", null, 3L));
+                50L, TipoMovimiento.CANJE, -200, null, "Canje de Sala VIP", null, 3L));
     }
 }

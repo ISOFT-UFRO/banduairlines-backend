@@ -41,8 +41,9 @@ public class CanjeController {
     @PostMapping("/canjes")
     @Operation(
             summary = "Canjear puntos por un beneficio",
-            description = "Solo PASAJERO. Valida que el beneficio exista, esté disponible, que el nivel alcance y que "
-                    + "haya puntos suficientes, y registra un movimiento CANJE. No modifica millas ni baja el nivel. "
+            description = "Solo PASAJERO. Valida que el beneficio exista en el catálogo, esté habilitado y con stock, que el "
+                    + "nivel alcance y que haya puntos suficientes, y registra un movimiento CANJE. No modifica millas "
+                    + "ni baja el nivel. "
                     + "Reintentos: si se repite la misma Clave-Idempotencia con el mismo beneficio, responde 200 con "
                     + "exactamente la misma respuesta del canje original (mismo idCanje, saldoAnterior, "
                     + "puntosDescontados, saldoActual y movimiento) y no descuenta puntos otra vez. Si la clave ya se "
@@ -63,11 +64,11 @@ public class CanjeController {
             @ApiResponse(responseCode = "403", description = "ACCESO_DENEGADO: el rol no participa en fidelización", content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "404", description = "BENEFICIO_NO_ENCONTRADO o CUENTA_NO_ENCONTRADA", content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "409", description = "CANJE_DUPLICADO: la clave ya se usó con otro beneficio", content = @Content(schema = @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "422", description = "BENEFICIO_AGOTADO, NIVEL_INSUFICIENTE o PUNTOS_INSUFICIENTES", content = @Content(schema = @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "502", description = "MILLAS_NO_DISPONIBLES", content = @Content(schema = @Schema(implementation = ApiError.class)))
+            @ApiResponse(responseCode = "422", description = "BENEFICIO_AGOTADO (deshabilitado o sin stock), NIVEL_INSUFICIENTE o PUNTOS_INSUFICIENTES", content = @Content(schema = @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "502", description = "MILLAS_NO_DISPONIBLES o MOVIMIENTOS_NO_DISPONIBLES", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     public ResponseEntity<RespuestaCanje> canjear(
-            @Parameter(description = "Identificador único de la solicitud, por ejemplo un UUID. Entre 8 y 64 caracteres: letras, números o guiones.",
+            @Parameter(description = "Identificador único de la solicitud, por ejemplo un UUID. Entre 8 y 40 caracteres: letras, números o guiones.",
                     required = true, example = "3f2b6c1e-8d4a-4f0e-9b7a-1c2d3e4f5a6b")
             @RequestHeader(name = ENCABEZADO_CLAVE, required = false) String claveIdempotencia,
             @Valid @RequestBody SolicitudCanje solicitud) {

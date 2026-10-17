@@ -16,4 +16,6 @@ public final class CodigosFidelizacion {
     public static final String CANJE_DUPLICADO = "CANJE_DUPLICADO";
     /** Lo emite el cálculo de millas (ActualizacionFidelizacionService) y se propaga tal cual. */
     public static final String MILLAS_NO_DISPONIBLES = "MILLAS_NO_DISPONIBLES";
+    /** No se pudo consultar ni registrar movimientos de puntos (historial, canjes o stock). */
+    public static final String MOVIMIENTOS_NO_DISPONIBLES = "MOVIMIENTOS_NO_DISPONIBLES";
 }

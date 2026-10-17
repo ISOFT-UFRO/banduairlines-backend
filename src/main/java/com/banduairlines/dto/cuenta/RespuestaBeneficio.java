@@ -1,6 +1,5 @@
 package com.banduairlines.dto.cuenta;
 
-import com.banduairlines.model.enums.MotivoBloqueo;
 import com.banduairlines.model.enums.Nivel;
 import io.swagger.v3.oas.annotations.media.Schema;
 

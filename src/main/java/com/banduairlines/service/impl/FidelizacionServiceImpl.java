@@ -7,15 +7,16 @@ import com.banduairlines.dto.cuenta.RespuestaFidelizacion;
 import com.banduairlines.dto.cuenta.RespuestaMovimientoPuntos;
 import com.banduairlines.dto.cuenta.RespuestaPaginada;
 import com.banduairlines.exception.ValidacionException;
+import com.banduairlines.model.Usuario;
 import com.banduairlines.model.enums.Nivel;
-import com.banduairlines.persistence.cuenta.RegistroPuntos;
-import com.banduairlines.repository.BeneficioRepository;
-import com.banduairlines.repository.CuentaPuntosRepository;
-import com.banduairlines.repository.HistorialPuntosRepository;
 import com.banduairlines.security.UsuarioActual;
 import com.banduairlines.service.cuenta.ActualizacionFidelizacionService;
+import com.banduairlines.service.cuenta.CatalogoBeneficios;
 import com.banduairlines.service.cuenta.FidelizacionService;
 import com.banduairlines.service.cuenta.GestionNivelService;
+import com.banduairlines.repository.UsuarioRepository;
+import com.banduairlines.service.cuenta.BeneficioConfigurado;
+import com.banduairlines.service.cuenta.FuenteMovimientosPuntos.MovimientoPuntos;
 import com.banduairlines.service.cuenta.RegistroPuntosService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -29,32 +30,34 @@ import java.util.List;
 @Service
 public class FidelizacionServiceImpl implements FidelizacionService {
 
+    static final int MOVIMIENTOS_RECIENTES = 5;
     static final int TAMANO_MAXIMO_PAGINA = 100;
 
     private final ActualizacionFidelizacionService actualizacion;
     private final GestionNivelService niveles;
-    private final BeneficioRepository beneficios;
-    private final HistorialPuntosRepository historial;
-    private final CuentaPuntosRepository cuentas;
+    private final CatalogoBeneficios catalogo;
+    private final AccesoMovimientosPuntos movimientos;
+    private final UsuarioRepository usuarios;
     private final UsuarioActual usuarioActual;
     private final MapeadorFidelizacion mapeador;
 
     public FidelizacionServiceImpl(ActualizacionFidelizacionService actualizacion, GestionNivelService niveles,
-                                   BeneficioRepository beneficios, HistorialPuntosRepository historial,
-                                   CuentaPuntosRepository cuentas, UsuarioActual usuarioActual,
+                                   CatalogoBeneficios catalogo, AccesoMovimientosPuntos movimientos,
+                                   UsuarioRepository usuarios, UsuarioActual usuarioActual,
                                    MapeadorFidelizacion mapeador) {
         this.actualizacion = actualizacion;
         this.niveles = niveles;
-        this.beneficios = beneficios;
-        this.historial = historial;
-        this.cuentas = cuentas;
+        this.catalogo = catalogo;
+        this.movimientos = movimientos;
+        this.usuarios = usuarios;
         this.usuarioActual = usuarioActual;
         this.mapeador = mapeador;
     }
 
     /**
-     * Antes de responder actualiza puntos, millas y nivel con los vuelos realizados
-     * (ActualizacionFidelizacionService). Esa actualización también valida que el usuario sea un pasajero activo.
+     * Saldo de puntos, millas, nivel y multiplicador vienen ya calculados por ActualizacionFidelizacionService, que
+     * además valida que el usuario sea un pasajero activo. Aquí solo se transforman y se completan con el progreso,
+     * los beneficios canjeables y los últimos movimientos.
      */
     @Override
     @Transactional
@@ -64,12 +67,13 @@ public class FidelizacionServiceImpl implements FidelizacionService {
         Nivel nivel = estado.nivelActual();
         long saldo = estado.saldoPuntos();
 
-        List<RespuestaBeneficio> disponibles = beneficios.findAllByOrderByCostoPuntosAscNombreAsc().stream()
-                .map(beneficio -> mapeador.beneficio(beneficio, nivel, saldo))
+        List<BeneficioConfigurado> beneficios = catalogo.listar();
+        List<RespuestaBeneficio> disponibles = mapeador.beneficios(beneficios, nivel, saldo,
+                        CatalogoBeneficioServiceImpl.canjesRegistrados(beneficios, movimientos)).stream()
                 .filter(RespuestaBeneficio::disponible)
                 .toList();
-        List<RespuestaMovimientoPuntos> recientes = mapeador.movimientos(
-                historial.findTop5ByIdUsuarioOrderByFechaDescIdRegistroDesc(idUsuario));
+        List<RespuestaMovimientoPuntos> recientes = mapeador.movimientos(movimientos.exigir()
+                .consultarMovimientos(idUsuario, PageRequest.of(0, MOVIMIENTOS_RECIENTES)).getContent());
 
         return new RespuestaFidelizacion(
                 saldo,
@@ -92,11 +96,11 @@ public class FidelizacionServiceImpl implements FidelizacionService {
             throw new ValidacionException("El tamaño de página debe estar entre 1 y " + TAMANO_MAXIMO_PAGINA);
         }
         Long idUsuario = usuarioActual.exigirId();
-        RegistroPuntosService.exigirPasajero(
-                cuentas.findById(idUsuario).orElseThrow(RegistroPuntosService::cuentaNoEncontrada));
+        Usuario usuario = usuarios.findById(idUsuario).orElseThrow(RegistroPuntosService::cuentaNoEncontrada);
+        RegistroPuntosService.exigirPasajero(usuario);
 
-        Page<RegistroPuntos> resultado = historial.findByIdUsuarioOrderByFechaDescIdRegistroDesc(
-                idUsuario, PageRequest.of(pagina, tamano));
+        Page<MovimientoPuntos> resultado = movimientos.exigir()
+                .consultarMovimientos(idUsuario, PageRequest.of(pagina, tamano));
         return new RespuestaPaginada<>(
                 mapeador.movimientos(resultado.getContent()),
                 resultado.getNumber(),
@@ -123,8 +127,8 @@ public class FidelizacionServiceImpl implements FidelizacionService {
     }
 
     /**
-     * Orden de los niveles que gestiona Cuentas. Depende del enum Nivel (Persona 2):
-     * hoy es BASICO, PLATA, ORO y PLATINO, pero PLATINO no se usa y ORO es el máximo.
+     * Orden de los niveles que gestiona Cuentas según el enum Nivel original
+     * (BASICO, PLATA, ORO y PLATINO). PLATINO no tiene umbral configurado, así que ORO es el máximo.
      */
     private static Nivel nivelSiguiente(Nivel nivel) {
         return switch (nivel) {

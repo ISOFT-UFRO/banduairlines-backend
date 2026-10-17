@@ -33,15 +33,15 @@ public class BeneficioController {
     @GetMapping("/beneficios")
     @Operation(
             summary = "Consultar el catálogo de beneficios",
-            description = "Solo PASAJERO. Devuelve todos los beneficios. Si el pasajero no puede canjear uno, "
-                    + "disponible es false y motivoBloqueo indica por qué: BENEFICIO_AGOTADO, NIVEL_INSUFICIENTE "
+            description = "Solo PASAJERO. Devuelve todo el catálogo configurado (app.fidelizacion.beneficios). Si el pasajero no puede canjear uno, "
+                    + "disponible es false y motivoBloqueo indica por qué: BENEFICIO_AGOTADO (deshabilitado o sin stock), NIVEL_INSUFICIENTE "
                     + "o PUNTOS_INSUFICIENTES."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Catálogo de beneficios"),
             @ApiResponse(responseCode = "401", description = "NO_AUTENTICADO", content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "403", description = "ACCESO_DENEGADO: el rol no participa en fidelización", content = @Content(schema = @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "502", description = "MILLAS_NO_DISPONIBLES", content = @Content(schema = @Schema(implementation = ApiError.class)))
+            @ApiResponse(responseCode = "502", description = "MILLAS_NO_DISPONIBLES o MOVIMIENTOS_NO_DISPONIBLES", content = @Content(schema = @Schema(implementation = ApiError.class)))
     })
     public List<RespuestaBeneficio> listar() {
         return catalogoBeneficioService.listarActual();
