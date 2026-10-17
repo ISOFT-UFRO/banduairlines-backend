@@ -166,16 +166,27 @@ public class CambioCorreoServiceImpl implements CambioCorreoService {
 
     private Usuario obtenerUsuarioActual() {
         Long idUsuario = usuarioActual.exigirId();
-        Usuario usuario = usuarioRepository.findById(idUsuario)
+        Usuario usuario = usuarioRepository.buscarParaActualizar(idUsuario)
                 .orElseThrow(() -> new AuthenticationCredentialsNotFoundException(
                         "La cuenta autenticada ya no esta disponible"
                 ));
 
+        if (!Boolean.TRUE.equals(usuario.getActivo())) {
+            throw new AuthenticationCredentialsNotFoundException("La cuenta no esta activa");
+        }
         if (usuario.getRol() != RolUsuario.PASAJERO
                 && usuario.getRol() != RolUsuario.ADMINISTRADOR) {
             throw new AccessDeniedException("El rol no puede cambiar el correo");
         }
         return usuario;
+    }
+
+    @Override
+    public void invalidarUsuario(Long idUsuario) {
+        synchronized (monitorSolicitudes) {
+            invalidarSolicitudesAnteriores(idUsuario, clock.instant());
+            solicitudes.entrySet().removeIf(e -> e.getValue().idUsuario.equals(idUsuario));
+        }
     }
 
     private SolicitudPendiente buscarSolicitud(

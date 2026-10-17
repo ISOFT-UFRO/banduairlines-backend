@@ -12,4 +12,5 @@ public interface CambioCorreoService {
     RespuestaUsuario confirmar(Long idSolicitud, ConfirmacionCambioCorreo confirmacion);
 
     void cancelar(Long idSolicitud);
+    void invalidarUsuario(Long idUsuario);
 }
