@@ -51,4 +51,17 @@ public interface BoletoRepository extends JpaRepository<Boleto, Long>{
                                        @Param("confirmada") EstadoReserva confirmada,
                                        @Param("abiertas") Collection<EstadoReserva> abiertas,
                                        @Param("ahora") LocalDateTime ahora);
+
+    /** RESERVA: indica si el asiento ya está tomado en el vuelo por otra reserva en alguno de los estados dados. */
+    @Query("""
+            select count(b) > 0 from Boleto b
+            where b.vueloId.id = :vueloId
+              and b.asientoId.id = :asientoId
+              and b.reserva.id <> :reservaId
+              and b.reserva.estado in :estados
+            """)
+    boolean asientoOcupadoPorOtraReserva(@Param("vueloId") Long vueloId,
+                                         @Param("asientoId") Long asientoId,
+                                         @Param("reservaId") Long reservaId,
+                                         @Param("estados") Collection<EstadoReserva> estados);
 }

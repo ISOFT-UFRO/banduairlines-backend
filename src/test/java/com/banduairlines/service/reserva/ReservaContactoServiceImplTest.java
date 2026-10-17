@@ -49,7 +49,7 @@ class ReservaContactoServiceImplTest {
     void registrar_compraVencida_lanza409() {
         Reserva reserva = CompraReservaFixtures.reserva(EstadoReserva.PENDIENTE_PAGO);
         when(reservaAcceso.obtenerAutorizada(1L, "tok")).thenReturn(reserva);
-        doThrow(new ConflictoException("x").conCodigo(ReservaAcceso.RESERVA_EXPIRADA)).when(reservaAcceso).exigirAbierta(reserva);
+        doThrow(new ConflictoException("x").conCodigo(ReservaAcceso.RESERVA_EXPIRADA)).when(reservaAcceso).exigirEnCurso(reserva);
 
         assertThatThrownBy(() -> service.registrar(1L, "tok", new ContactoRequest("a@b.cl", "+56911112222")))
                 .isInstanceOf(ConflictoException.class);

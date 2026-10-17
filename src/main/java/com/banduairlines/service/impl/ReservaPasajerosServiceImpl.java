@@ -67,7 +67,7 @@ public class ReservaPasajerosServiceImpl implements ReservaPasajerosService {
     @Transactional
     public PasajerosRegistradosResponse registrar(Long reservaId, String compraToken, RegistrarPasajerosRequest request) {
         Reserva reserva = reservaAcceso.obtenerAutorizada(reservaId, compraToken);
-        reservaAcceso.exigirAbierta(reserva);
+        reservaAcceso.exigirEnCurso(reserva);
 
         List<Boleto> boletos = boletoRepository.findByReserva_IdOrderByOrdenTramoAscIdAsc(reserva.getId());
         List<Pasajero> existentes = pasajeroRepository.findByReserva_IdOrderByIdAsc(reserva.getId());

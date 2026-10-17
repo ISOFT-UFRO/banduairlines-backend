@@ -18,8 +18,8 @@ import com.banduairlines.model.enums.TipoExtra;
 
 /**
  * Calcula el total de una reserva a partir de sus boletos (tarifa) y de los extras de cada boleto
- * (asiento preferente, equipaje y embarque prioritario), y le aplica el descuento de la promocion
- * Todos los montos son CLP enteros
+ * (asiento preferente, equipaje y embarque prioritario), y le aplica el descuento de la promoción.
+ * Todos los montos son CLP enteros.
  */
 @Component
 public class CalculadoraTotalReserva {
@@ -35,7 +35,7 @@ public class CalculadoraTotalReserva {
 
     /**
      * @param preciosVigentes false usa los precios guardados en la reserva (lo que vio el pasajero);
-     *                        true usa los precios actuales de la tarifa y del catalogo de extras
+     *                        true usa los precios actuales de la tarifa y del catálogo de extras.
      */
     public Resultado calcular(List<Boleto> boletos, Promocion promocion, boolean preciosVigentes) {
         long tarifas = 0;
@@ -77,7 +77,7 @@ public class CalculadoraTotalReserva {
         return new Resultado(subtotal, descuento, subtotal - descuento, lineas);
     }
 
-    /** PORCENTAJE se trunca al peso; MONTO_FIJO nunca supera el subtotal */
+    /** PORCENTAJE se trunca al peso; MONTO_FIJO nunca supera el subtotal. */
     public long descuento(Promocion promocion, long subtotal) {
         long valor = clp(promocion.getValor());
         long descuento = promocion.getTipoDescuento() == TipoDescuento.PORCENTAJE
@@ -94,7 +94,7 @@ public class CalculadoraTotalReserva {
                 && (promocion.getUsosMaximos() == null || promocion.getUsosActuales() < promocion.getUsosMaximos());
     }
 
-    /** Guarda subtotal, descuento y total en la cabecera de la reserva*/
+    /** Guarda subtotal, descuento y total en la cabecera de la reserva. */
     public void aplicar(Reserva reserva, Resultado resultado) {
         reserva.setSubtotal(BigDecimal.valueOf(resultado.subtotal()));
         reserva.setDescuento(BigDecimal.valueOf(resultado.descuento()));

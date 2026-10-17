@@ -65,4 +65,4 @@ public class CompraTokenService {
                 generar(reservaId).getBytes(StandardCharsets.UTF_8),
                 token.trim().getBytes(StandardCharsets.UTF_8));
     }
-}
+}

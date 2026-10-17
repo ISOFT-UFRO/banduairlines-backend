@@ -31,7 +31,7 @@ public class ReservaContactoServiceImpl implements ReservaContactoService {
     @Transactional
     public ContactoResponse registrar(Long reservaId, String compraToken, ContactoRequest request) {
         Reserva reserva = reservaAcceso.obtenerAutorizada(reservaId, compraToken);
-        reservaAcceso.exigirAbierta(reserva);
+        reservaAcceso.exigirEnCurso(reserva);
 
         reserva.setEmailContacto(request.correo().trim().toLowerCase(Locale.ROOT));
         reserva.setTelefonoContacto(request.telefono().trim());
