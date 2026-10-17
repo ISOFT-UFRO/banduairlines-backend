@@ -3,19 +3,16 @@ package com.banduairlines.dto.busqueda;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 public class DetalleCotizacionResponse {
-
-    // --- Identificadores de Selección ---
 
     private Long vueloId;
 
     private Long tarifaId;
 
     private String claseCabina;
-
-    // --- Desglose de Precios ---
 
     private BigDecimal subtotalAdultos;
 
@@ -26,4 +23,16 @@ public class DetalleCotizacionResponse {
     private BigDecimal impuestos;
 
     private BigDecimal precioTotal;
+
+    private BigDecimal precioPorPasajero;
+
+    private String moneda;
+
+    private ResumenPasajerosResponse pasajeros;
+
+    private PackTarifarioBusquedaResponse pack;
+
+    private List<TramoTarifaResponse> tramos;
+
+    private SeleccionReservaResponse seleccionReserva;
 }
