@@ -30,4 +30,19 @@ public interface VueloRepository extends JpaRepository<Vuelo, Long>{
             @Param("fin") LocalDateTime fin, @Param("ahora") LocalDateTime ahora,
             @Param("estados") Collection<EstadoVuelo> estados,
             @Param("estadoAeronave") Estado estadoAeronave);
+
+    @Query("""
+            select v from Vuelo v
+            join fetch v.ruta r
+            join fetch r.origen o
+            join fetch r.destino d
+            where v.salidaProgramada >= :inicio and v.salidaProgramada < :fin
+              and r.activa = true and v.aeronave.estado = :estadoAeronave
+              and v.estado in :estados
+            order by v.salidaProgramada, v.id
+            """)
+    List<Vuelo> buscarCandidatosOfrecibles(@Param("inicio") LocalDateTime inicio,
+            @Param("fin") LocalDateTime fin,
+            @Param("estados") Collection<EstadoVuelo> estados,
+            @Param("estadoAeronave") Estado estadoAeronave);
 }
