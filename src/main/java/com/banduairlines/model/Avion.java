@@ -16,16 +16,16 @@ public class Avion {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id; 
+    private Long id;
 
     @Column(nullable = false, unique = true, length = 15)
-    private String matricula; 
+    private String matricula;
 
     @Column(nullable = false, length = 60)
-    private String modelo; 
+    private String modelo;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
-    private Estado estado = Estado.ACTIVA; 
+    private Estado estado = Estado.ACTIVA;
 }

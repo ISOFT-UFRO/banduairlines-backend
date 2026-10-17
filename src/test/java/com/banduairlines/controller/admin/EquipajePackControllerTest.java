@@ -1,0 +1,174 @@
+package com.banduairlines.controller.admin;
+
+import com.banduairlines.dto.admin.EquipajePackResponse;
+import com.banduairlines.dto.admin.EquipajePackRequest;
+import com.banduairlines.exception.GlobalExceptionHandler;
+import com.banduairlines.service.admin.EquipajePackService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import com.banduairlines.exception.ReglaNegocioException;
+import com.banduairlines.exception.RecursoNoEncontradoException;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@ExtendWith(MockitoExtension.class)
+class EquipajePackControllerTest {
+
+        private MockMvc mockMvc;
+
+        @Mock
+        private EquipajePackService servicio;
+
+        @InjectMocks
+        private EquipajePackController controlador;
+
+        private final EquipajePackResponse respuesta = new EquipajePackResponse(
+                        1L,
+                        "Prueba RF06",
+                        true,
+                        1,
+                        23);
+
+        @BeforeEach
+        void preparar() {
+                mockMvc = MockMvcBuilders.standaloneSetup(controlador)
+                                .setControllerAdvice(new GlobalExceptionHandler())
+                                .build();
+        }
+
+        @Test
+        void obtenerDevuelveEquipajeDelPack() throws Exception {
+                when(servicio.obtener(1L)).thenReturn(respuesta);
+
+                mockMvc.perform(get("/api/v1/admin/packs/1/equipaje"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.packId").value(1))
+                                .andExpect(jsonPath("$.nombrePack").value("Prueba RF06"))
+                                .andExpect(jsonPath("$.incluyeEquipajeCabina").value(true))
+                                .andExpect(jsonPath("$.piezasBodegaIncluidas").value(1))
+                                .andExpect(jsonPath("$.kgPorPiezaBodega").value(23));
+
+                verify(servicio).obtener(1L);
+        }
+
+        @Test
+        void actualizarRecibeElJsonYDevuelveEquipaje() throws Exception {
+                EquipajePackRequest solicitud = new EquipajePackRequest(
+                                true,
+                                1,
+                                23);
+
+                when(servicio.actualizar(1L, solicitud))
+                                .thenReturn(respuesta);
+
+                mockMvc.perform(put("/api/v1/admin/packs/1/equipaje")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {
+                                                    "incluyeEquipajeCabina": true,
+                                                    "piezasBodegaIncluidas": 1,
+                                                    "kgPorPiezaBodega": 23
+                                                }
+                                                """))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.packId").value(1))
+                                .andExpect(jsonPath("$.incluyeEquipajeCabina").value(true))
+                                .andExpect(jsonPath("$.piezasBodegaIncluidas").value(1))
+                                .andExpect(jsonPath("$.kgPorPiezaBodega").value(23));
+
+                verify(servicio).actualizar(1L, solicitud);
+        }
+
+        @Test
+        void actualizarRechazaCamposObligatoriosAusentes()
+                        throws Exception {
+
+                mockMvc.perform(put("/api/v1/admin/packs/1/equipaje")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{}"))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.code").value("VALIDACION"))
+                                .andExpect(jsonPath("$.details.length()").value(3));
+
+                verifyNoInteractions(servicio);
+        }
+
+        @Test
+        void actualizarDevuelveErrorPorEquipajeIncoherente()
+                        throws Exception {
+
+                EquipajePackRequest solicitud = new EquipajePackRequest(
+                                true, 0, 23);
+
+                when(servicio.actualizar(1L, solicitud))
+                                .thenThrow(
+                                                new ReglaNegocioException(
+                                                                "Sin piezas de bodega, el peso debe ser cero")
+                                                                .conCodigo("EQUIPAJE_BODEGA_INCOHERENTE"));
+
+                mockMvc.perform(put("/api/v1/admin/packs/1/equipaje")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {
+                                                    "incluyeEquipajeCabina": true,
+                                                    "piezasBodegaIncluidas": 0,
+                                                    "kgPorPiezaBodega": 23
+                                                }
+                                                """))
+                                .andExpect(status().is(422))
+                                .andExpect(jsonPath("$.code")
+                                                .value("EQUIPAJE_BODEGA_INCOHERENTE"));
+
+                verify(servicio).actualizar(1L, solicitud);
+        }
+
+        @Test
+        void obtenerDevuelveErrorSiElPackNoExiste() throws Exception {
+                when(servicio.obtener(999L))
+                                .thenThrow(
+                                                new RecursoNoEncontradoException("Pack tarifario", 999L));
+
+                mockMvc.perform(get("/api/v1/admin/packs/999/equipaje"))
+                                .andExpect(status().isNotFound())
+                                .andExpect(jsonPath("$.code")
+                                                .value("RECURSO_NO_ENCONTRADO"));
+
+                verify(servicio).obtener(999L);
+        }
+
+        @ParameterizedTest
+        @CsvSource({
+                        "-1, 23",
+                        "1, -1"
+        })
+        void actualizarRechazaValoresNegativos(int piezas, int kilos)
+                        throws Exception {
+
+                String cuerpo = """
+                                {
+                                    "incluyeEquipajeCabina": true,
+                                    "piezasBodegaIncluidas": %d,
+                                    "kgPorPiezaBodega": %d
+                                }
+                                """.formatted(piezas, kilos);
+
+                mockMvc.perform(put("/api/v1/admin/packs/1/equipaje")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(cuerpo))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.code").value("VALIDACION"));
+
+                verifyNoInteractions(servicio);
+        }
+}
