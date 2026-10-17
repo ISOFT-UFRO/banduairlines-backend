@@ -30,6 +30,19 @@ public class PerfilUsuarioService {
         this.reloj = reloj;
     }
 
+    @Transactional(readOnly = true)
+    public RespuestaUsuario consultarActual() {
+        var identidad = usuarioActual.exigir();
+        exigirRol(identidad.rol());
+        var usuario = usuarios.findById(identidad.id()).orElseThrow(() ->
+                new RecursoNoEncontradoException("La cuenta no existe").conCodigo("CUENTA_NO_ENCONTRADA"));
+        exigirRol(usuario.getRol());
+        if (!Boolean.TRUE.equals(usuario.getActivo())) {
+            throw new AuthenticationCredentialsNotFoundException("La cuenta no esta activa");
+        }
+        return MapeadorUsuario.aRespuesta(usuario);
+    }
+
     @Transactional
     public RespuestaUsuario actualizarActual(SolicitudActualizacionPerfil solicitud) {
         var identidad = usuarioActual.exigir();

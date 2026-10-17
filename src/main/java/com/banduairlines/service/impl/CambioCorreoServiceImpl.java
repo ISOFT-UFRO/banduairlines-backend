@@ -23,6 +23,8 @@ import org.springframework.security.authentication.AuthenticationCredentialsNotF
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.security.SecureRandom;
 import java.time.Clock;
@@ -141,8 +143,7 @@ public class CambioCorreoServiceImpl implements CambioCorreoService {
                 throw correoYaRegistrado();
             }
 
-            solicitud.fechaConfirmacion = ahora;
-            solicitud.codigoHash = null;
+            confirmarAlCompletarTransaccion(solicitud, ahora);
         }
 
         return MapeadorUsuario.aRespuesta(usuario);
@@ -251,6 +252,33 @@ public class CambioCorreoServiceImpl implements CambioCorreoService {
         return correo.substring(0, 1) + "*****" + correo.substring(separador);
     }
 
+    private void confirmarAlCompletarTransaccion(SolicitudPendiente solicitud, Instant ahora) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            solicitud.fechaConfirmacion = ahora;
+            solicitud.codigoHash = null;
+            return;
+        }
+
+        solicitud.confirmacionEnCurso = true;
+        try {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCompletion(int status) {
+                    synchronized (solicitud) {
+                        if (status == STATUS_COMMITTED) {
+                            solicitud.fechaConfirmacion = ahora;
+                            solicitud.codigoHash = null;
+                        }
+                        solicitud.confirmacionEnCurso = false;
+                    }
+                }
+            });
+        } catch (RuntimeException ex) {
+            solicitud.confirmacionEnCurso = false;
+            throw ex;
+        }
+    }
+
     private ConflictoException correoYaRegistrado() {
         return new ConflictoException("El correo ya se encuentra registrado")
                 .conCodigo(CodigosError.CORREO_YA_REGISTRADO);
@@ -270,6 +298,7 @@ public class CambioCorreoServiceImpl implements CambioCorreoService {
         private final Instant fechaExpiracion;
         private Instant fechaConfirmacion;
         private Instant fechaCancelacion;
+        private boolean confirmacionEnCurso;
 
         private SolicitudPendiente(
                 Long idSolicitud,
@@ -298,7 +327,7 @@ public class CambioCorreoServiceImpl implements CambioCorreoService {
         }
 
         private boolean puedeUtilizarse() {
-            return !fueConfirmada() && !fueCancelada() && codigoHash != null;
+            return !fueConfirmada() && !fueCancelada() && !confirmacionEnCurso && codigoHash != null;
         }
     }
 }

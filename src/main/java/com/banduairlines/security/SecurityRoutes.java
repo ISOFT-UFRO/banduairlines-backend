@@ -11,7 +11,8 @@ public final class SecurityRoutes {
             API + "/health",
             "/actuator/health",
             "/actuator/health/**",
-            API + "/pagos/notificaciones"
+            API + "/pagos/notificaciones",
+            API + "/checkin/invitado/**"
     };
 
     public static final String[] PUBLICAS_GET = {
@@ -34,10 +35,6 @@ public final class SecurityRoutes {
 
     public static final String AUTH_CIERRE_SESION =
             API + "/auth/cierre-sesion";
-
-    public static final String[] SOLO_SUPERADMIN = {
-            API + "/admin/cuentas/**"
-    };
 
     public static final String[] SOLO_PASAJERO = {
             API + "/cuentas/actual/fidelizacion",

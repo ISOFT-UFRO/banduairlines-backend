@@ -64,7 +64,6 @@ public class SecurityConfig {
                     } else {
 
                         auth.requestMatchers(HttpMethod.POST, SecurityRoutes.AUTH_CIERRE_SESION).authenticated();
-                        auth.requestMatchers(SecurityRoutes.SOLO_SUPERADMIN).hasAuthority("ROLE_SUPERADMIN");
                         auth.requestMatchers(SecurityRoutes.SOLO_PASAJERO).hasRole("PASAJERO");
                         auth.requestMatchers(SecurityRoutes.CUENTA_ACTUAL).hasAnyRole("PASAJERO", "ADMINISTRADOR");
                         auth.requestMatchers(SecurityRoutes.SOLO_ADMIN).hasRole("ADMINISTRADOR");
