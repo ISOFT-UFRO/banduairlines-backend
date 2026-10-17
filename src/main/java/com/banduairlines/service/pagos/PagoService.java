@@ -24,6 +24,7 @@ public interface PagoService {
 
     BoletaResponse obtenerBoletaPorId(Long boletaId);
 
+    BoletaPdfDto generarBoletaPdf(Long boletaId, String compraToken);
 
     BoletaResponse obtenerBoletaPorId(Long boletaId);
 
