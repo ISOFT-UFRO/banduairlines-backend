@@ -28,6 +28,7 @@ import com.banduairlines.model.enums.ClaseCabina;
 import com.banduairlines.repository.TarifaVueloRepository;
 import com.banduairlines.repository.VueloRepository;
 import com.banduairlines.service.busqueda.BusquedaVueloService;
+import com.banduairlines.service.busqueda.MontosBusqueda;
 import com.banduairlines.service.busqueda.PasajerosBusquedaService;
 import com.banduairlines.service.busqueda.TarifasBusquedaService;
 
@@ -105,11 +106,11 @@ public class TarifasBusquedaServiceImpl implements TarifasBusquedaService {
                                List<TarifaVuelo> seleccion, ResumenPasajerosResponse pasajeros,
                                List<TarifaItinerarioResponse> ofertas) {
         if (posicion == ids.size()) {
-            BigDecimal unitario = seleccion.stream().map(TarifaVuelo::getPrecio)
+            BigDecimal unitario = seleccion.stream().map(t -> MontosBusqueda.clp(t.getPrecio()))
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             List<TramoTarifaResponse> tramos = seleccion.stream().map(t -> new TramoTarifaResponse(
                     t.getVuelo().getId(), t.getVuelo().getCodigoVuelo(), t.getId(),
-                    t.getClaseCabina(), t.getPrecio())).toList();
+                    t.getClaseCabina(), MontosBusqueda.clp(t.getPrecio()))).toList();
             ofertas.add(new TarifaItinerarioResponse(pack(seleccion.get(0).getPack()), MONEDA,
                     unitario, unitario.multiply(BigDecimal.valueOf(pasajeros.totalPasajeros())), tramos));
             return;

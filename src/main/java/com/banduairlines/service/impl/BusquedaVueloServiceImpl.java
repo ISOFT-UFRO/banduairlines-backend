@@ -23,6 +23,7 @@ import com.banduairlines.repository.RutaRepository;
 import com.banduairlines.repository.TarifaVueloRepository;
 import com.banduairlines.repository.VueloRepository;
 import com.banduairlines.service.busqueda.BusquedaVueloService;
+import com.banduairlines.service.busqueda.MontosBusqueda;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -178,7 +179,8 @@ public class BusquedaVueloServiceImpl implements BusquedaVueloService {
                 .orElseThrow(() -> new ReglaNegocioException("No se encontró el vuelo con ID: " + vueloId)
                         .conCodigo("VUELO_NO_ENCONTRADO"));
 
-        List<TarifaVuelo> tarifasActivas = tarifaVueloRepository.buscarTarifasActivasPorVuelo(vueloId);
+        List<TarifaVuelo> tarifasActivas = tarifaVueloRepository.buscarTarifasActivasPorVuelo(vueloId).stream()
+                .filter(t -> t.getPrecio().signum() >= 0).toList();
 
         Map<ClaseCabina, List<TarifaVuelo>> tarifasPorCabina = tarifasActivas.stream()
                 .collect(Collectors.groupingBy(
@@ -205,7 +207,7 @@ public class BusquedaVueloServiceImpl implements BusquedaVueloService {
                     && disponibles >= asientosNecesarios;
 
             BigDecimal precioDesde = tarifasCabina.stream()
-                    .map(TarifaVuelo::getPrecio)
+                    .map(t -> MontosBusqueda.clp(t.getPrecio()))
                     .min(BigDecimal::compareTo)
                     .orElse(BigDecimal.ZERO);
 
