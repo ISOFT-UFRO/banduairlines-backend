@@ -7,4 +7,6 @@ import java.util.Optional;
 
 public interface ReservaRepository extends JpaRepository<Reserva, Long>{
     Optional<Reserva> findByCodigoReservaAndEmailContacto(String codigoReserva, String emailContacto);
+    Optional<Reserva> findByCodigoReserva(String codigoReserva);
+    
 }
