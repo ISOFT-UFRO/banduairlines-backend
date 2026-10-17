@@ -18,6 +18,7 @@ public class ReservasController {
 
     private ReservasService reservasService;
     public ReservasController(ReservasService reservasService) {
+        //mini typo
         this.reservasService = reservasService;
     }
 
@@ -28,7 +29,7 @@ public class ReservasController {
         return ResponseEntity.ok(r);
     }
 
-    //Usuario NO registrado
+    //Usuario no registrado
     @PostMapping("/buscar")
     public ResponseEntity<PeticionReservaResponse> getReserva(@RequestBody PeticionReservaQuery dto){
         
