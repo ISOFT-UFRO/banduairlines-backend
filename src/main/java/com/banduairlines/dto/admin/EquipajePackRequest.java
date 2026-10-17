@@ -3,7 +3,7 @@ package com.banduairlines.dto.admin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
-public record EquipajePackSolicitud(
+public record EquipajePackRequest(
 
     @NotNull(message = "Debe indicar si incluye equipaje de cabina")
     Boolean incluyeEquipajeCabina,

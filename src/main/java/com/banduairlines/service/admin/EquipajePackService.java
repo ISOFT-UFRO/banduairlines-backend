@@ -1,14 +1,14 @@
 package com.banduairlines.service.admin;
 
-import com.banduairlines.dto.admin.EquipajePackRespuesta;
-import com.banduairlines.dto.admin.EquipajePackSolicitud;
+import com.banduairlines.dto.admin.EquipajePackResponse;
+import com.banduairlines.dto.admin.EquipajePackRequest;
 
 public interface EquipajePackService {
 
-    EquipajePackRespuesta obtener(Long packId);
+    EquipajePackResponse obtener(Long packId);
 
-    EquipajePackRespuesta actualizar(
+    EquipajePackResponse actualizar(
         Long packId,
-        EquipajePackSolicitud solicitud
+        EquipajePackRequest solicitud
     );
 }

@@ -39,7 +39,7 @@ class AvionRequestDtoTest {
 
     @Test
     void permitirAsientosOmitidos() {
-        AvionRequestDto solicitud = solicitudValida();
+        AvionRequest solicitud = solicitudValida();
         solicitud.setAsientos(null);
 
         assertThat(validador.validate(solicitud)).isEmpty();
@@ -47,7 +47,7 @@ class AvionRequestDtoTest {
 
     @Test
     void permitirListaDeAsientosVacia() {
-        AvionRequestDto solicitud = solicitudValida();
+        AvionRequest solicitud = solicitudValida();
         solicitud.setAsientos(List.of());
 
         assertThat(validador.validate(solicitud)).isEmpty();
@@ -57,7 +57,7 @@ class AvionRequestDtoTest {
     @NullSource
     @ValueSource(ints = {0, -1})
     void rechazarFilaInvalidaEnAsientoAnidado(Integer fila) {
-        AvionRequestDto solicitud = solicitudValida();
+        AvionRequest solicitud = solicitudValida();
         solicitud.getAsientos().get(0).setFila(fila);
 
         assertThat(validador.validate(solicitud))
@@ -67,7 +67,7 @@ class AvionRequestDtoTest {
 
     @Test
     void rechazarLetraVaciaEnAsientoAnidado() {
-        AvionRequestDto solicitud = solicitudValida();
+        AvionRequest solicitud = solicitudValida();
         solicitud.getAsientos().get(0).setLetra("");
 
         assertThat(validador.validate(solicitud))
@@ -77,20 +77,20 @@ class AvionRequestDtoTest {
 
     @Test
     void rechazarElementoNuloEnListaDeAsientos() {
-        AvionRequestDto solicitud = solicitudValida();
+        AvionRequest solicitud = solicitudValida();
         solicitud.setAsientos(Collections.singletonList(null));
 
         assertThat(validador.validate(solicitud)).isNotEmpty();
     }
 
-    private AvionRequestDto solicitudValida() {
-        AsientoRequestDto asiento = new AsientoRequestDto();
+    private AvionRequest solicitudValida() {
+        AsientoRequest asiento = new AsientoRequest();
         asiento.setFila(1);
         asiento.setLetra("A");
         asiento.setClaseCabina(ClaseCabina.ECONOMY);
         asiento.setEsPreferente(false);
 
-        AvionRequestDto solicitud = new AvionRequestDto();
+        AvionRequest solicitud = new AvionRequest();
         solicitud.setMatricula("CC-BNA");
         solicitud.setModelo("Airbus A320");
         solicitud.setAsientos(List.of(asiento));

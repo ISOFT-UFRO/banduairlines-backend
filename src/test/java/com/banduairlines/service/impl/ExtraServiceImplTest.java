@@ -13,8 +13,8 @@ import org.mockito.Mock;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.banduairlines.dto.admin.ExtraRespuesta;
-import com.banduairlines.dto.admin.ExtraSolicitud;
+import com.banduairlines.dto.admin.ExtraResponse;
+import com.banduairlines.dto.admin.ExtraRequest;
 import com.banduairlines.exception.RecursoNoEncontradoException;
 import com.banduairlines.model.Extra;
 import com.banduairlines.model.enums.TipoExtra;
@@ -29,8 +29,8 @@ class ExtraServiceImplTest {
     @InjectMocks
     private ExtraServiceImpl extraService;
 
-    private ExtraSolicitud solicitud() {
-        return new ExtraSolicitud(
+    private ExtraRequest solicitud() {
+        return new ExtraRequest(
                 TipoExtra.EMBARQUE_PRIORITARIO,
                 "Embarque Prioritario",
                 null,
@@ -46,7 +46,7 @@ class ExtraServiceImplTest {
             return extra;
         });
 
-        ExtraRespuesta respuesta = extraService.crear(solicitud());
+        ExtraResponse respuesta = extraService.crear(solicitud());
 
         assertThat(respuesta.id()).isEqualTo(1L);
         assertThat(respuesta.tipo()).isEqualTo(TipoExtra.EMBARQUE_PRIORITARIO);
@@ -81,7 +81,7 @@ class ExtraServiceImplTest {
                 .build();
         when(extraRepository.findById(1L)).thenReturn(Optional.of(extra));
 
-        ExtraRespuesta respuesta = extraService.cambiarEstado(1L, false);
+        ExtraResponse respuesta = extraService.cambiarEstado(1L, false);
 
         assertThat(respuesta.activo()).isFalse();
         assertThat(extra.getActivo()).isFalse();

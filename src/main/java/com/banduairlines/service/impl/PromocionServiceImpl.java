@@ -6,8 +6,8 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.banduairlines.dto.admin.PromocionRespuesta;
-import com.banduairlines.dto.admin.PromocionSolicitud;
+import com.banduairlines.dto.admin.PromocionResponse;
+import com.banduairlines.dto.admin.PromocionRequest;
 import com.banduairlines.exception.ConflictoException;
 import com.banduairlines.exception.RecursoNoEncontradoException;
 import com.banduairlines.exception.ReglaNegocioException;
@@ -27,7 +27,7 @@ public class PromocionServiceImpl implements PromocionService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<PromocionRespuesta> listar(Boolean activa) {
+    public List<PromocionResponse> listar(Boolean activa) {
         return promocionRepository.listarAdministracion(activa)
                 .stream()
                 .map(this::mapearADto)
@@ -36,12 +36,12 @@ public class PromocionServiceImpl implements PromocionService {
 
     @Override
     @Transactional(readOnly = true)
-    public PromocionRespuesta obtener(Long id) {
+    public PromocionResponse obtener(Long id) {
         return mapearADto(exigirPromocion(id));
     }
 
     @Override
-    public PromocionRespuesta crear(PromocionSolicitud solicitud) {
+    public PromocionResponse crear(PromocionRequest solicitud) {
         if (promocionRepository.existsByCodigo(solicitud.codigo())) {
             throw new ConflictoException("Ya existe un código promocional con el código: " + solicitud.codigo());
         }
@@ -63,7 +63,7 @@ public class PromocionServiceImpl implements PromocionService {
     }
 
     @Override
-    public PromocionRespuesta actualizar(Long id, PromocionSolicitud solicitud) {
+    public PromocionResponse actualizar(Long id, PromocionRequest solicitud) {
         Promocion promocion = exigirPromocion(id);
 
         if (promocionRepository.existsByCodigoAndIdNot(solicitud.codigo(), id)) {
@@ -83,7 +83,7 @@ public class PromocionServiceImpl implements PromocionService {
     }
 
     @Override
-    public PromocionRespuesta cambiarEstado(Long id, boolean activa) {
+    public PromocionResponse cambiarEstado(Long id, boolean activa) {
         Promocion promocion = exigirPromocion(id);
         promocion.setActiva(activa);
         return mapearADto(promocion);
@@ -102,8 +102,8 @@ public class PromocionServiceImpl implements PromocionService {
         }
     }
 
-    private PromocionRespuesta mapearADto(Promocion promocion) {
-        return new PromocionRespuesta(
+    private PromocionResponse mapearADto(Promocion promocion) {
+        return new PromocionResponse(
                 promocion.getId(),
                 promocion.getCodigo(),
                 promocion.getTipoDescuento(),

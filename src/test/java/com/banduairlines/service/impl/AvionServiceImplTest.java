@@ -1,8 +1,8 @@
 package com.banduairlines.service.impl;
 
-import com.banduairlines.dto.admin.AsientoRequestDto;
-import com.banduairlines.dto.admin.AvionRequestDto;
-import com.banduairlines.dto.admin.AvionResponseDto;
+import com.banduairlines.dto.admin.AsientoRequest;
+import com.banduairlines.dto.admin.AvionRequest;
+import com.banduairlines.dto.admin.AvionResponse;
 import com.banduairlines.exception.ConflictoException;
 import com.banduairlines.exception.RecursoNoEncontradoException;
 import com.banduairlines.model.Avion;
@@ -42,18 +42,18 @@ class AvionServiceImplTest {
     @InjectMocks
     private AvionServiceImpl avionService;
 
-    private AvionRequestDto requestDto;
+    private AvionRequest requestDto;
     private Avion avionGuardado;
 
     @BeforeEach
     void setUp() {
-        AsientoRequestDto asientoDto = new AsientoRequestDto();
+        AsientoRequest asientoDto = new AsientoRequest();
         asientoDto.setFila(1);
         asientoDto.setLetra("a");
         asientoDto.setClaseCabina(ClaseCabina.BUSINESS);
         asientoDto.setEsPreferente(true);
 
-        requestDto = new AvionRequestDto();
+        requestDto = new AvionRequest();
         requestDto.setMatricula("CC-BNA");
         requestDto.setModelo("Airbus A320neo");
         requestDto.setAsientos(List.of(asientoDto));
@@ -89,7 +89,7 @@ class AvionServiceImplTest {
         when(asientoRepository.findByAeronaveId(1L)).thenReturn(Collections.emptyList());
 
         // Act
-        AvionResponseDto respuesta = avionService.obtenerPorId(1L);
+        AvionResponse respuesta = avionService.obtenerPorId(1L);
 
         // Assert
         assertThat(respuesta).isNotNull();

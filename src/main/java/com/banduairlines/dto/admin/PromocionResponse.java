@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 
 import com.banduairlines.model.enums.TipoDescuento;
 
-public record PromocionRespuesta(
+public record PromocionResponse(
         Long id,
         String codigo,
         TipoDescuento tipoDescuento,

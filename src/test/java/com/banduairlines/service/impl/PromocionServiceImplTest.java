@@ -17,8 +17,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.banduairlines.dto.admin.PromocionRespuesta;
-import com.banduairlines.dto.admin.PromocionSolicitud;
+import com.banduairlines.dto.admin.PromocionResponse;
+import com.banduairlines.dto.admin.PromocionRequest;
 import com.banduairlines.exception.ConflictoException;
 import com.banduairlines.exception.ReglaNegocioException;
 import com.banduairlines.model.Promocion;
@@ -49,7 +49,7 @@ class PromocionServiceImplTest {
         when(promocionRepository.existsByCodigo(CODIGO)).thenReturn(false);
         when(promocionRepository.save(any(Promocion.class))).thenAnswer(invocacion -> invocacion.getArgument(0));
 
-        PromocionRespuesta creada = promocionService.crear(solicitud());
+        PromocionResponse creada = promocionService.crear(solicitud());
         assertThat(creada.codigo()).isEqualTo(CODIGO);
         assertThat(creada.valor()).isEqualTo(VALOR);
         assertThat(creada.activa()).isTrue();
@@ -78,7 +78,7 @@ class PromocionServiceImplTest {
     void listar_cuandoSeFiltraPorActivas_retornaLasPromocionesMapeadas() {
         when(promocionRepository.listarAdministracion(true)).thenReturn(List.of(promocion()));
 
-        assertThat(promocionService.listar(true)).containsExactly(new PromocionRespuesta(ID, CODIGO,
+        assertThat(promocionService.listar(true)).containsExactly(new PromocionResponse(ID, CODIGO,
                 TipoDescuento.PORCENTAJE, VALOR, INICIO, EXPIRACION, USOS_MAXIMOS, USOS_ACTUALES, true));
     }
 
@@ -88,7 +88,7 @@ class PromocionServiceImplTest {
         when(promocionRepository.findById(ID)).thenReturn(Optional.of(existente));
         when(promocionRepository.existsByCodigoAndIdNot(CODIGO_NUEVO, ID)).thenReturn(false);
 
-        promocionService.actualizar(ID, new PromocionSolicitud(CODIGO_NUEVO, TipoDescuento.MONTO_FIJO,
+        promocionService.actualizar(ID, new PromocionRequest(CODIGO_NUEVO, TipoDescuento.MONTO_FIJO,
                 VALOR_NUEVO, INICIO, EXPIRACION, USOS_MAXIMOS));
 
         assertThat(existente.getCodigo()).isEqualTo(CODIGO_NUEVO);
@@ -106,12 +106,12 @@ class PromocionServiceImplTest {
         assertThat(promocion.getActiva()).isFalse();
     }
 
-    private PromocionSolicitud solicitud() {
+    private PromocionRequest solicitud() {
         return solicitud(INICIO, EXPIRACION);
     }
 
-    private PromocionSolicitud solicitud(LocalDateTime desde, LocalDateTime hasta) {
-        return new PromocionSolicitud(CODIGO, TipoDescuento.PORCENTAJE, VALOR, desde, hasta, USOS_MAXIMOS);
+    private PromocionRequest solicitud(LocalDateTime desde, LocalDateTime hasta) {
+        return new PromocionRequest(CODIGO, TipoDescuento.PORCENTAJE, VALOR, desde, hasta, USOS_MAXIMOS);
     }
 
     private Promocion promocion() {

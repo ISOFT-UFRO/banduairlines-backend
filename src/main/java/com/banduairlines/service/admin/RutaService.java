@@ -2,27 +2,27 @@ package com.banduairlines.service.admin;
 
 import org.springframework.data.domain.Page;
 
-import com.banduairlines.dto.admin.RutaRespuesta;
-import com.banduairlines.dto.admin.RutaSolicitud;
+import com.banduairlines.dto.admin.RutaResponse;
+import com.banduairlines.dto.admin.RutaRequest;
 import java.util.List;
 
 public interface RutaService {
-    Page<RutaRespuesta> listar(
+    Page<RutaResponse> listar(
             Boolean activa,
             int pagina,
             int tamaño);
 
-    Page<RutaRespuesta> buscar(
+    Page<RutaResponse> buscar(
             Boolean activa,
             String texto,
             int pagina,
             int tamano);
 
-    RutaRespuesta obtener(Long id);
-    RutaRespuesta crear(RutaSolicitud solicitud);
-    RutaRespuesta actualizar(Long id, RutaSolicitud solicitud);
-    RutaRespuesta cambiarEstado(Long id, boolean activa);
-    List<RutaRespuesta> listarTodas(Boolean activa);
-    List<RutaRespuesta> buscarTodas(Boolean activa, String texto);
+    RutaResponse obtener(Long id);
+    RutaResponse crear(RutaRequest solicitud);
+    RutaResponse actualizar(Long id, RutaRequest solicitud);
+    RutaResponse cambiarEstado(Long id, boolean activa);
+    List<RutaResponse> listarTodas(Boolean activa);
+    List<RutaResponse> buscarTodas(Boolean activa, String texto);
 
 }

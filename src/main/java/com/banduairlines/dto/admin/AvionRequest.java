@@ -10,7 +10,7 @@ import java.util.List;
 
 @Getter
 @Setter
-public class AvionRequestDto {
+public class AvionRequest {
     @NotBlank(message = "La matrícula es obligatoria")
     @Size(max = 15)
     private String matricula;
@@ -19,5 +19,5 @@ public class AvionRequestDto {
     @Size(max = 60)
     private String modelo;
     @Valid    private List<@NotNull(message = "La lista no puede contener asientos nulos")
-        AsientoRequestDto> asientos;
+        AsientoRequest> asientos;
 }

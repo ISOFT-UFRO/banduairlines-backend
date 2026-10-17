@@ -10,7 +10,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class AsientoRequestDto {
+public class AsientoRequest {
     @NotNull(message = "La fila es obligatoria")
     @Positive(message = "La fila debe ser mayor que cero")
     private Integer fila;

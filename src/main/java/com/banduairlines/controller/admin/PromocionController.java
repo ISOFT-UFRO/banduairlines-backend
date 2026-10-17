@@ -15,9 +15,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.banduairlines.dto.admin.EstadoSolicitud;
-import com.banduairlines.dto.admin.PromocionRespuesta;
-import com.banduairlines.dto.admin.PromocionSolicitud;
+import com.banduairlines.dto.admin.EstadoRequest;
+import com.banduairlines.dto.admin.PromocionResponse;
+import com.banduairlines.dto.admin.PromocionRequest;
 import com.banduairlines.service.admin.PromocionService;
 
 import jakarta.validation.Valid;
@@ -34,32 +34,32 @@ public class PromocionController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMINISTRADOR')")
-    public List<PromocionRespuesta> listar(@RequestParam(required = false) Boolean activa) {
+    public List<PromocionResponse> listar(@RequestParam(required = false) Boolean activa) {
         return promocionService.listar(activa);
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasRole('ADMINISTRADOR')")
-    public PromocionRespuesta obtener(@PathVariable Long id) {
+    public PromocionResponse obtener(@PathVariable Long id) {
         return promocionService.obtener(id);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ADMINISTRADOR')")
-    public PromocionRespuesta crear(@Valid @RequestBody PromocionSolicitud solicitud) {
+    public PromocionResponse crear(@Valid @RequestBody PromocionRequest solicitud) {
         return promocionService.crear(solicitud);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMINISTRADOR')")
-    public PromocionRespuesta actualizar(@PathVariable Long id, @Valid @RequestBody PromocionSolicitud solicitud) {
+    public PromocionResponse actualizar(@PathVariable Long id, @Valid @RequestBody PromocionRequest solicitud) {
         return promocionService.actualizar(id, solicitud);
     }
 
     @PatchMapping("/{id}/activo")
     @PreAuthorize("hasRole('ADMINISTRADOR')")
-    public PromocionRespuesta cambiarEstado(@PathVariable Long id, @Valid @RequestBody EstadoSolicitud solicitud) {
+    public PromocionResponse cambiarEstado(@PathVariable Long id, @Valid @RequestBody EstadoRequest solicitud) {
         return promocionService.cambiarEstado(id, solicitud.activo());
     }
 }

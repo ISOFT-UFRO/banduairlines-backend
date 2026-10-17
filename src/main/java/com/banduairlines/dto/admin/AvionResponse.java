@@ -8,7 +8,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Builder
-public class AvionResponseDto {
+public class AvionResponse {
     private Long id;
     private String matricula;
     private String modelo;

@@ -1,7 +1,7 @@
 package com.banduairlines.service.impl;
 
-import com.banduairlines.dto.admin.AvionRequestDto;
-import com.banduairlines.dto.admin.AvionResponseDto;
+import com.banduairlines.dto.admin.AvionRequest;
+import com.banduairlines.dto.admin.AvionResponse;
 import com.banduairlines.exception.ConflictoException;
 import com.banduairlines.exception.RecursoNoEncontradoException;
 import com.banduairlines.model.Asiento;
@@ -26,7 +26,7 @@ public class AvionServiceImpl implements AvionService {
 
     @Transactional
     @Override
-    public AvionResponseDto crearAvion(AvionRequestDto request) {
+    public AvionResponse crearAvion(AvionRequest request) {
         if (avionRepository.existsByMatricula(request.getMatricula())) {
             throw new ConflictoException("Ya existe una aeronave registrada con la matrícula: " + request.getMatricula());
         }
@@ -55,7 +55,7 @@ public class AvionServiceImpl implements AvionService {
             totalAsientos = asientos.size();
         }
 
-        return AvionResponseDto.builder()
+        return AvionResponse.builder()
                 .id(avionGuardado.getId())
                 .matricula(avionGuardado.getMatricula())
                 .modelo(avionGuardado.getModelo())
@@ -66,13 +66,13 @@ public class AvionServiceImpl implements AvionService {
 
     @Transactional(readOnly = true)
     @Override
-    public AvionResponseDto obtenerPorId(Long id) {
+    public AvionResponse obtenerPorId(Long id) {
         Avion avion = avionRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Aeronave no encontrada con ID: " + id));
 
         int totalAsientos = asientoRepository.findByAeronaveId(id).size();
 
-        return AvionResponseDto.builder()
+        return AvionResponse.builder()
                 .id(avion.getId())
                 .matricula(avion.getMatricula())
                 .modelo(avion.getModelo())

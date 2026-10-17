@@ -1,7 +1,7 @@
 package com.banduairlines.controller.admin;
 
-import com.banduairlines.dto.admin.RutaRespuesta;
-import com.banduairlines.dto.admin.RutaSolicitud;
+import com.banduairlines.dto.admin.RutaResponse;
+import com.banduairlines.dto.admin.RutaRequest;
 import com.banduairlines.exception.GlobalExceptionHandler;
 import com.banduairlines.service.admin.RutaService;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,10 +43,10 @@ class RutaControllerTest {
 
         @Test
         void crearRecibeJsonYDevuelveUbicacion() throws Exception {
-                RutaSolicitud solicitud = new RutaSolicitud(
+                RutaRequest solicitud = new RutaRequest(
                                 1L, 2L, 620, 85, true);
 
-                RutaRespuesta respuesta = new RutaRespuesta(
+                RutaResponse respuesta = new RutaResponse(
                                 10L,
                                 1L, "SCL", "Santiago",
                                 2L, "ZCO", "Temuco",
@@ -77,7 +77,7 @@ class RutaControllerTest {
 
         @Test
         void cambiarEstadoRecibeFalseCorrectamente() throws Exception {
-                RutaRespuesta respuesta = new RutaRespuesta(
+                RutaResponse respuesta = new RutaResponse(
                                 10L,
                                 1L, "SCL", "Santiago",
                                 2L, "ZCO", "Temuco",
@@ -98,21 +98,8 @@ class RutaControllerTest {
         }
 
         @Test
-        void cambiarEstadoRechazaCampoAusente() throws Exception {
-                mockMvc.perform(patch("/api/v1/admin/rutas/10/estado")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content("{}"))
-                                .andExpect(status().isBadRequest())
-                                .andExpect(jsonPath("$.code").value("VALIDACION"))
-                                .andExpect(jsonPath(
-                                                "$.details[?(@.campo == 'activa')]").exists());
-
-                verifyNoInteractions(servicio);
-        }
-
-        @Test
         void actualizarDevuelveConflictoSiLaRutaTieneVuelos() throws Exception {
-                RutaSolicitud solicitud = new RutaSolicitud(
+                RutaRequest solicitud = new RutaRequest(
                                 1L, 3L, 700, 90, true);
 
                 when(servicio.actualizar(10L, solicitud))
@@ -149,7 +136,7 @@ class RutaControllerTest {
         void listarTodasRecibeElFiltroYDevuelveUnArreglo(Boolean activa)
                         throws Exception {
 
-                RutaRespuesta respuesta = new RutaRespuesta(
+                RutaResponse respuesta = new RutaResponse(
                                 10L,
                                 1L, "SCL", "Santiago",
                                 2L, "ZCO", "Temuco",

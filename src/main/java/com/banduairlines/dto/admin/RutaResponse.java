@@ -1,6 +1,6 @@
 package com.banduairlines.dto.admin;
 
-public record RutaRespuesta(
+public record RutaResponse(
         Long id,
         Long origenId,
         String origenCodigoIata,

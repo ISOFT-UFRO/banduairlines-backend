@@ -1,7 +1,7 @@
 package com.banduairlines.controller.admin;
 
-import com.banduairlines.dto.admin.AvionRequestDto;
-import com.banduairlines.dto.admin.AvionResponseDto;
+import com.banduairlines.dto.admin.AvionRequest;
+import com.banduairlines.dto.admin.AvionResponse;
 import com.banduairlines.exception.GlobalExceptionHandler;
 import com.banduairlines.model.enums.Estado;
 import com.banduairlines.service.admin.AvionService;
@@ -87,7 +87,7 @@ class AvionControllerTest {
 
     @Test
     void aceptarSolicitudValidaYDevolverCreado() throws Exception {
-        AvionResponseDto respuesta = AvionResponseDto.builder()
+        AvionResponse respuesta = AvionResponse.builder()
                 .id(1L)
                 .matricula("CC-BNA")
                 .modelo("Airbus A320")
@@ -95,7 +95,7 @@ class AvionControllerTest {
                 .totalAsientos(1)
                 .build();
 
-        when(servicio.crearAvion(any(AvionRequestDto.class)))
+        when(servicio.crearAvion(any(AvionRequest.class)))
                 .thenReturn(respuesta);
 
         mockMvc.perform(post("/api/v1/admin/aeronaves")
@@ -105,7 +105,7 @@ class AvionControllerTest {
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.totalAsientos").value(1));
 
-        verify(servicio).crearAvion(any(AvionRequestDto.class));
+        verify(servicio).crearAvion(any(AvionRequest.class));
     }
 
     private String cuerpoConFila(int fila) {

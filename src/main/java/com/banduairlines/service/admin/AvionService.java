@@ -1,11 +1,11 @@
 package com.banduairlines.service.admin;
 
-import com.banduairlines.dto.admin.AvionRequestDto;
-import com.banduairlines.dto.admin.AvionResponseDto;
+import com.banduairlines.dto.admin.AvionRequest;
+import com.banduairlines.dto.admin.AvionResponse;
 
 public interface AvionService {
 
-    AvionResponseDto crearAvion(AvionRequestDto solicitud);
+    AvionResponse crearAvion(AvionRequest solicitud);
 
-    AvionResponseDto obtenerPorId(Long id);
+    AvionResponse obtenerPorId(Long id);
 }

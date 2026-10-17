@@ -3,7 +3,7 @@ package com.banduairlines.dto.admin;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
-public record RutaSolicitud(
+public record RutaRequest(
 
         @NotNull(message = "El aeropuerto de origen es obligatorio") 
         @Positive(message = "El identificador de origen debe ser positivo") 

@@ -9,10 +9,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
-/**
- * Solicitud para crear o actualizar un servicio adicional (RF-07).
- */
-public record ExtraSolicitud(
+public record ExtraRequest(
         @NotNull(message = "El tipo de servicio es obligatorio")
         TipoExtra tipo,
 
