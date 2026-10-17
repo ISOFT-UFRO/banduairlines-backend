@@ -202,6 +202,7 @@ public class BusquedaVueloServiceImpl implements BusquedaVueloService {
 
             int disponibles = capacidadTotal > 0 ? Math.max(0, capacidadTotal - ocupados) : 0;
             boolean cabinaDisponible = ESTADOS_DISPONIBLES.contains(vuelo.getEstado())
+                    && vuelo.getAeronave().getEstado() == Estado.ACTIVA
                     && vuelo.getSalidaProgramada().isAfter(LocalDateTime.now(clock))
                     && Boolean.TRUE.equals(vuelo.getRuta().getActiva())
                     && disponibles >= asientosNecesarios;

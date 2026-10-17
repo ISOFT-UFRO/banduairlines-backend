@@ -11,8 +11,9 @@ import com.banduairlines.dto.busqueda.AeropuertoBusquedaResponse;
 import com.banduairlines.dto.busqueda.AlternativaVueloResponse;
 import com.banduairlines.dto.busqueda.BusquedaVueloRequest;
 import com.banduairlines.dto.busqueda.OrdenVuelo;
+import com.banduairlines.dto.busqueda.PasajerosBusquedaRequest;
 import com.banduairlines.dto.busqueda.VueloBusquedaResponse;
-import com.banduairlines.service.BusquedaService;
+import com.banduairlines.service.busqueda.BusquedaService;
 
 @RestController
 @RequestMapping("/api/v1/busqueda")
@@ -24,14 +25,16 @@ public class BusquedaController {
     }
 
     @GetMapping("/vuelos/buscar")
-    public List<VueloBusquedaResponse> buscarVuelos(@Valid @ModelAttribute BusquedaVueloRequest criterios) {
-        return busqueda.buscarVuelos(criterios);
+    public List<VueloBusquedaResponse> buscarVuelos(@Valid @ModelAttribute BusquedaVueloRequest criterios,
+            @Valid @ModelAttribute PasajerosBusquedaRequest pasajeros) {
+        return busqueda.buscarVuelos(criterios, pasajeros);
     }
 
     @GetMapping("/vuelos/comparar")
     public List<AlternativaVueloResponse> compararVuelos(@Valid @ModelAttribute BusquedaVueloRequest criterios,
-            @RequestParam(defaultValue = "HORARIO") OrdenVuelo orden) {
-        return busqueda.compararVuelos(criterios, orden);
+            @RequestParam(defaultValue = "HORARIO") OrdenVuelo orden,
+            @Valid @ModelAttribute PasajerosBusquedaRequest pasajeros) {
+        return busqueda.compararVuelos(criterios, orden, pasajeros);
     }
 
     @GetMapping("/aeropuertos")
