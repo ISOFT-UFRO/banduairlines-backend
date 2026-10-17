@@ -15,6 +15,9 @@ import com.banduairlines.model.Promocion;
 import com.banduairlines.repository.PromocionRepository;
 import com.banduairlines.service.admin.PromocionService;
 
+import java.math.BigDecimal;
+import com.banduairlines.model.enums.TipoDescuento;
+
 @Service
 @Transactional
 public class PromocionServiceImpl implements PromocionService {
@@ -47,6 +50,7 @@ public class PromocionServiceImpl implements PromocionService {
         }
 
         validarVigencia(solicitud.vigenteDesde(), solicitud.vigenteHasta());
+        validarDescuento(solicitud);
 
         Promocion promocion = Promocion.builder()
                 .codigo(solicitud.codigo())
@@ -71,6 +75,7 @@ public class PromocionServiceImpl implements PromocionService {
         }
 
         validarVigencia(solicitud.vigenteDesde(), solicitud.vigenteHasta());
+        validarDescuento(solicitud);
 
         promocion.setCodigo(solicitud.codigo());
         promocion.setTipoDescuento(solicitud.tipoDescuento());
@@ -112,7 +117,16 @@ public class PromocionServiceImpl implements PromocionService {
                 promocion.getVigenteHasta(),
                 promocion.getUsosMaximos(),
                 promocion.getUsosActuales(),
-                promocion.getActiva()
-        );
+                promocion.getActiva());
+    }
+
+    private void validarDescuento(PromocionRequest solicitud) {
+        if (solicitud.tipoDescuento() == TipoDescuento.PORCENTAJE
+                && solicitud.valor().compareTo(BigDecimal.valueOf(100)) > 0) {
+
+            throw new ReglaNegocioException(
+                    "El descuento porcentual no puede superar el 100 %")
+                    .conCodigo("DESCUENTO_PORCENTUAL_INVALIDO");
+        }
     }
 }

@@ -105,7 +105,7 @@ public class RutaServiceImpl implements RutaService {
         }
     }
 
-    public void asignarDatos(Ruta ruta, RutaRequest solicitud) {
+    private void asignarDatos(Ruta ruta, RutaRequest solicitud) {
         Aeropuerto origen = buscarAeropuerto(solicitud.origenId());
         Aeropuerto destino = buscarAeropuerto(solicitud.destinoId());
 

@@ -24,6 +24,8 @@ import com.banduairlines.exception.ReglaNegocioException;
 import com.banduairlines.model.Promocion;
 import com.banduairlines.model.enums.TipoDescuento;
 import com.banduairlines.repository.PromocionRepository;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 @ExtendWith(MockitoExtension.class)
 class PromocionServiceImplTest {
@@ -104,6 +106,93 @@ class PromocionServiceImplTest {
         promocionService.cambiarEstado(ID, false);
 
         assertThat(promocion.getActiva()).isFalse();
+    }
+
+    @Test
+    void crearRechazaPorcentajeSuperiorACien() {
+        PromocionRequest solicitud = new PromocionRequest(
+                CODIGO,
+                TipoDescuento.PORCENTAJE,
+                new BigDecimal("100.01"),
+                INICIO,
+                EXPIRACION,
+                USOS_MAXIMOS);
+
+        assertThatThrownBy(() -> promocionService.crear(solicitud))
+                .isInstanceOfSatisfying(
+                        ReglaNegocioException.class,
+                        excepcion -> assertThat(excepcion.getCodigo())
+                                .isEqualTo("DESCUENTO_PORCENTUAL_INVALIDO"));
+
+        verify(promocionRepository, never()).save(any(Promocion.class));
+    }
+
+    @Test
+    void actualizarRechazaPorcentajeSuperiorACienSinModificarLaPromocion() {
+        Promocion existente = promocion();
+        when(promocionRepository.findById(ID))
+                .thenReturn(Optional.of(existente));
+
+        PromocionRequest solicitud = new PromocionRequest(
+                CODIGO_NUEVO,
+                TipoDescuento.PORCENTAJE,
+                new BigDecimal("100.01"),
+                INICIO,
+                EXPIRACION,
+                USOS_MAXIMOS);
+
+        assertThatThrownBy(() -> promocionService.actualizar(ID, solicitud))
+                .isInstanceOfSatisfying(
+                        ReglaNegocioException.class,
+                        excepcion -> assertThat(excepcion.getCodigo())
+                                .isEqualTo("DESCUENTO_PORCENTUAL_INVALIDO"));
+
+        assertThat(existente.getCodigo()).isEqualTo(CODIGO);
+        assertThat(existente.getValor()).isEqualByComparingTo(VALOR);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "PORCENTAJE, 100.00",
+            "MONTO_FIJO, 5000.00"
+    })
+    void crearAceptaElLimitePorcentualYMontoFijo(
+            TipoDescuento tipo, String valor) {
+
+        BigDecimal importe = new BigDecimal(valor);
+
+        when(promocionRepository.save(any(Promocion.class)))
+                .thenAnswer(invocacion -> invocacion.getArgument(0));
+
+        PromocionRequest solicitud = new PromocionRequest(
+                CODIGO, tipo, importe, INICIO, EXPIRACION, USOS_MAXIMOS);
+
+        PromocionResponse respuesta = promocionService.crear(solicitud);
+
+        assertThat(respuesta.tipoDescuento()).isEqualTo(tipo);
+        assertThat(respuesta.valor()).isEqualByComparingTo(importe);
+    }
+
+    @Test
+    void actualizarAceptaPorcentajeDeCien() {
+        Promocion existente = promocion();
+        when(promocionRepository.findById(ID))
+                .thenReturn(Optional.of(existente));
+
+        PromocionRequest solicitud = new PromocionRequest(
+                CODIGO_NUEVO,
+                TipoDescuento.PORCENTAJE,
+                new BigDecimal("100.00"),
+                INICIO,
+                EXPIRACION,
+                USOS_MAXIMOS);
+
+        PromocionResponse respuesta = promocionService.actualizar(ID, solicitud);
+
+        assertThat(respuesta.valor())
+                .isEqualByComparingTo(new BigDecimal("100.00"));
+        assertThat(existente.getValor())
+                .isEqualByComparingTo(new BigDecimal("100.00"));
     }
 
     private PromocionRequest solicitud() {
