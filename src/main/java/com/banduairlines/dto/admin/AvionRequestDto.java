@@ -2,6 +2,8 @@ package com.banduairlines.dto.admin;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 import java.util.List;
@@ -16,6 +18,6 @@ public class AvionRequestDto {
     @NotBlank(message = "El modelo es obligatorio")
     @Size(max = 60)
     private String modelo;
-
-    private List<AsientoRequestDto> asientos; // Mapa inicial de asientos opcional al crear
+    @Valid    private List<@NotNull(message = "La lista no puede contener asientos nulos")
+        AsientoRequestDto> asientos;
 }

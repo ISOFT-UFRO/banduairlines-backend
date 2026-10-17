@@ -2,8 +2,7 @@ package com.banduairlines.controller.admin;
 
 import com.banduairlines.dto.admin.AvionRequestDto;
 import com.banduairlines.dto.admin.AvionResponseDto;
-import com.banduairlines.service.impl.AvionServiceImpl;
-
+import com.banduairlines.service.admin.AvionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -15,16 +14,20 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AvionController {
 
-    private final AvionServiceImpl avionService;
+    private final AvionService avionService;
 
     @PostMapping
-    public ResponseEntity<AvionResponseDto> crearAvion(@Valid @RequestBody AvionRequestDto request) {
-        AvionResponseDto nuevaAvion = avionService.crearAvion(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(nuevaAvion);
+    public ResponseEntity<AvionResponseDto> crearAvion(
+            @Valid @RequestBody AvionRequestDto request) {
+
+        AvionResponseDto respuesta = avionService.crearAvion(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(respuesta);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<AvionResponseDto> obtenerAvion(@PathVariable Long id) {
+    public ResponseEntity<AvionResponseDto> obtenerAvion(
+            @PathVariable Long id) {
+
         return ResponseEntity.ok(avionService.obtenerPorId(id));
     }
 }

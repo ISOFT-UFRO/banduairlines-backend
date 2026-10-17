@@ -4,6 +4,7 @@ import com.banduairlines.model.enums.ClaseCabina;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -11,6 +12,7 @@ import lombok.Setter;
 @Setter
 public class AsientoRequestDto {
     @NotNull(message = "La fila es obligatoria")
+    @Positive(message = "La fila debe ser mayor que cero")
     private Integer fila;
 
     @NotBlank(message = "La letra es obligatoria")
