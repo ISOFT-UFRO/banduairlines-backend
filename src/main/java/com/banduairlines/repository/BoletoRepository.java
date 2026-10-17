@@ -1,16 +1,19 @@
 package com.banduairlines.repository;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.banduairlines.model.Boleto;
+import com.banduairlines.model.enums.ClaseCabina;
+import com.banduairlines.model.enums.EstadoPago;
 import com.banduairlines.model.enums.EstadoReserva;
 import com.banduairlines.model.enums.TipoPasajero;
 import com.banduairlines.dto.reportes.PasajeroTipoProjection;
 import com.banduairlines.dto.reportes.VentaExtraProjection;
-import java.time.LocalDateTime;
-import java.util.List;
 
 public interface BoletoRepository extends JpaRepository<Boleto, Long>{
     @Query("select b.pasajeroId.tipo as tipo, count(distinct b.pasajeroId.id) as cantidad " +
@@ -38,4 +41,245 @@ public interface BoletoRepository extends JpaRepository<Boleto, Long>{
             "group by e.id, e.nombre, e.tipo, r.moneda order by ingresos desc", nativeQuery = true)
     List<VentaExtraProjection> resumirVentasExtras(@Param("desde") LocalDateTime desde,
             @Param("hasta") LocalDateTime hasta);
+
+    @Query("""
+        select count(distinct b.id)
+        from Boleto b
+        join b.reserva r
+        join b.vueloId v
+        join b.tarifaVueloId tv
+        join b.pasajeroId ps
+        where (:inicio is null or r.createdAt >= :inicio)
+          and (:fin is null or r.createdAt < :fin)
+          and (:rutaId is null or v.ruta.id = :rutaId)
+          and (:origenIata is null or upper(v.ruta.origen.codigoIata) = :origenIata)
+          and (:destinoIata is null or upper(v.ruta.destino.codigoIata) = :destinoIata)
+          and (:estadoReserva is null or r.estado = :estadoReserva)
+          and (:tipoPasajero is null or ps.tipo = :tipoPasajero)
+          and (:packId is null or tv.pack.id = :packId)
+          and (:claseCabina is null or tv.claseCabina = :claseCabina)
+          and (
+                :estadoPago is null
+                or exists (
+                    select p.id
+                    from Pago p
+                    where p.reserva = r
+                      and p.estado = :estadoPago
+                )
+          )
+        """)
+    Long contarVentasReportes(
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fin") LocalDateTime fin,
+            @Param("rutaId") Long rutaId,
+            @Param("origenIata") String origenIata,
+            @Param("destinoIata") String destinoIata,
+            @Param("estadoReserva") EstadoReserva estadoReserva,
+            @Param("estadoPago") EstadoPago estadoPago,
+            @Param("tipoPasajero") TipoPasajero tipoPasajero,
+            @Param("packId") Long packId,
+            @Param("claseCabina") ClaseCabina claseCabina);
+
+    @Query("""
+        select r.createdAt, count(distinct b.id)
+        from Boleto b
+        join b.reserva r
+        join b.vueloId v
+        join b.tarifaVueloId tv
+        join b.pasajeroId ps
+        where (:inicio is null or r.createdAt >= :inicio)
+          and (:fin is null or r.createdAt < :fin)
+          and (:rutaId is null or v.ruta.id = :rutaId)
+          and (:origenIata is null or upper(v.ruta.origen.codigoIata) = :origenIata)
+          and (:destinoIata is null or upper(v.ruta.destino.codigoIata) = :destinoIata)
+          and (:estadoReserva is null or r.estado = :estadoReserva)
+          and (:tipoPasajero is null or ps.tipo = :tipoPasajero)
+          and (:packId is null or tv.pack.id = :packId)
+          and (:claseCabina is null or tv.claseCabina = :claseCabina)
+          and (
+                :estadoPago is null
+                or exists (
+                    select p.id from Pago p
+                    where p.reserva = r and p.estado = :estadoPago
+                )
+          )
+        group by r.createdAt
+        order by r.createdAt
+    """)
+    List<Object[]> ventasPorFechaReportes(
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fin") LocalDateTime fin,
+            @Param("rutaId") Long rutaId,
+            @Param("origenIata") String origenIata,
+            @Param("destinoIata") String destinoIata,
+            @Param("estadoReserva") EstadoReserva estadoReserva,
+            @Param("estadoPago") EstadoPago estadoPago,
+            @Param("tipoPasajero") TipoPasajero tipoPasajero,
+            @Param("packId") Long packId,
+            @Param("claseCabina") ClaseCabina claseCabina);
+
+    @Query("""
+        select
+            v.ruta.id,
+            v.ruta.origen.codigoIata,
+            v.ruta.origen.nombre,
+            v.ruta.destino.codigoIata,
+            v.ruta.destino.nombre,
+            count(distinct b.id)
+        from Boleto b
+        join b.reserva r
+        join b.vueloId v
+        join b.tarifaVueloId tv
+        join b.pasajeroId ps
+        where (:inicio is null or r.createdAt >= :inicio)
+          and (:fin is null or r.createdAt < :fin)
+          and (:rutaId is null or v.ruta.id = :rutaId)
+          and (:origenIata is null or upper(v.ruta.origen.codigoIata) = :origenIata)
+          and (:destinoIata is null or upper(v.ruta.destino.codigoIata) = :destinoIata)
+          and (:estadoReserva is null or r.estado = :estadoReserva)
+          and (:tipoPasajero is null or ps.tipo = :tipoPasajero)
+          and (:packId is null or tv.pack.id = :packId)
+          and (:claseCabina is null or tv.claseCabina = :claseCabina)
+          and (
+                :estadoPago is null
+                or exists (
+                    select p.id from Pago p
+                    where p.reserva = r and p.estado = :estadoPago
+                )
+          )
+        group by
+            v.ruta.id,
+            v.ruta.origen.codigoIata,
+            v.ruta.origen.nombre,
+            v.ruta.destino.codigoIata,
+            v.ruta.destino.nombre
+        order by count(distinct b.id) desc
+    """)
+    List<Object[]> rankingRutasReportes(
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fin") LocalDateTime fin,
+            @Param("rutaId") Long rutaId,
+            @Param("origenIata") String origenIata,
+            @Param("destinoIata") String destinoIata,
+            @Param("estadoReserva") EstadoReserva estadoReserva,
+            @Param("estadoPago") EstadoPago estadoPago,
+            @Param("tipoPasajero") TipoPasajero tipoPasajero,
+            @Param("packId") Long packId,
+            @Param("claseCabina") ClaseCabina claseCabina);
+    @Query("""
+        select ps.tipo, count(distinct ps.id)
+        from Boleto b
+        join b.reserva r
+        join b.vueloId v
+        join b.tarifaVueloId tv
+        join b.pasajeroId ps
+        where (:inicio is null or r.createdAt >= :inicio)
+          and (:fin is null or r.createdAt < :fin)
+          and (:rutaId is null or v.ruta.id = :rutaId)
+          and (:origenIata is null or upper(v.ruta.origen.codigoIata) = :origenIata)
+          and (:destinoIata is null or upper(v.ruta.destino.codigoIata) = :destinoIata)
+          and (:estadoReserva is null or r.estado = :estadoReserva)
+          and (:tipoPasajero is null or ps.tipo = :tipoPasajero)
+          and (:packId is null or tv.pack.id = :packId)
+          and (:claseCabina is null or tv.claseCabina = :claseCabina)
+          and (
+                :estadoPago is null
+                or exists (
+                    select p.id from Pago p
+                    where p.reserva = r and p.estado = :estadoPago
+                )
+          )
+        group by ps.tipo
+        order by ps.tipo
+    """)
+    List<Object[]> pasajerosPorTipoReportes(
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fin") LocalDateTime fin,
+            @Param("rutaId") Long rutaId,
+            @Param("origenIata") String origenIata,
+            @Param("destinoIata") String destinoIata,
+            @Param("estadoReserva") EstadoReserva estadoReserva,
+            @Param("estadoPago") EstadoPago estadoPago,
+            @Param("tipoPasajero") TipoPasajero tipoPasajero,
+            @Param("packId") Long packId,
+            @Param("claseCabina") ClaseCabina claseCabina);
+    @Query("""
+        select
+            tv.pack.id,
+            tv.pack.nombre,
+            tv.claseCabina,
+            count(distinct b.id),
+            coalesce(sum(b.precioTarifa), 0)
+        from Boleto b
+        join b.reserva r
+        join b.vueloId v
+        join b.tarifaVueloId tv
+        join b.pasajeroId ps
+        where (:inicio is null or r.createdAt >= :inicio)
+          and (:fin is null or r.createdAt < :fin)
+          and (:rutaId is null or v.ruta.id = :rutaId)
+          and (:origenIata is null or upper(v.ruta.origen.codigoIata) = :origenIata)
+          and (:destinoIata is null or upper(v.ruta.destino.codigoIata) = :destinoIata)
+          and (:estadoReserva is null or r.estado = :estadoReserva)
+          and (:tipoPasajero is null or ps.tipo = :tipoPasajero)
+          and (:packId is null or tv.pack.id = :packId)
+          and (:claseCabina is null or tv.claseCabina = :claseCabina)
+          and (
+                :estadoPago is null
+                or exists (
+                    select p.id from Pago p
+                    where p.reserva = r and p.estado = :estadoPago
+                )
+          )
+        group by tv.pack.id, tv.pack.nombre, tv.claseCabina
+        order by tv.pack.nombre, tv.claseCabina
+    """)
+    List<Object[]> tarifasPorPackYClaseReportes(
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fin") LocalDateTime fin,
+            @Param("rutaId") Long rutaId,
+            @Param("origenIata") String origenIata,
+            @Param("destinoIata") String destinoIata,
+            @Param("estadoReserva") EstadoReserva estadoReserva,
+            @Param("estadoPago") EstadoPago estadoPago,
+            @Param("tipoPasajero") TipoPasajero tipoPasajero,
+            @Param("packId") Long packId,
+            @Param("claseCabina") ClaseCabina claseCabina);
+    @Query("""
+        select count(distinct b.id)
+        from Boleto b
+        join b.reserva r
+        join b.vueloId v
+        join b.tarifaVueloId tv
+        join b.pasajeroId ps
+        where b.asientoId is not null
+          and r.estado = com.banduairlines.model.enums.EstadoReserva.CONFIRMADA
+          and (:inicio is null or v.salidaProgramada >= :inicio)
+          and (:fin is null or v.salidaProgramada < :fin)
+          and (:rutaId is null or v.ruta.id = :rutaId)
+          and (:origenIata is null or upper(v.ruta.origen.codigoIata) = :origenIata)
+          and (:destinoIata is null or upper(v.ruta.destino.codigoIata) = :destinoIata)
+          and (:estadoReserva is null or r.estado = :estadoReserva)
+          and (:tipoPasajero is null or ps.tipo = :tipoPasajero)
+          and (:packId is null or tv.pack.id = :packId)
+          and (:claseCabina is null or tv.claseCabina = :claseCabina)
+          and (
+                :estadoPago is null
+                or exists (
+                    select p.id from Pago p
+                    where p.reserva = r and p.estado = :estadoPago
+                )
+          )
+    """)
+    Long contarAsientosOcupadosReportes(
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fin") LocalDateTime fin,
+            @Param("rutaId") Long rutaId,
+            @Param("origenIata") String origenIata,
+            @Param("destinoIata") String destinoIata,
+            @Param("estadoReserva") EstadoReserva estadoReserva,
+            @Param("estadoPago") EstadoPago estadoPago,
+            @Param("tipoPasajero") TipoPasajero tipoPasajero,
+            @Param("packId") Long packId,
+            @Param("claseCabina") ClaseCabina claseCabina);
 }
