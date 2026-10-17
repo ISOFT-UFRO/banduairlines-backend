@@ -1,6 +1,8 @@
 package com.banduairlines.controller.busqueda;
 
 import com.banduairlines.dto.busqueda.FiltroBusquedaRequest;
+import com.banduairlines.dto.busqueda.ItinerarioVueloResponse;
+import java.util.List;
 import com.banduairlines.service.busqueda.FiltroBusquedaService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,14 +17,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class FiltroBusquedaController {
 
-    // --- Dependencias ---
-
     private final FiltroBusquedaService filtroBusquedaService;
 
-    // --- Endpoints ---
-
-    @GetMapping("/vuelos")
-    public ResponseEntity<?> obtenerVuelosFiltrados(@Valid @ModelAttribute FiltroBusquedaRequest request) {
+    @GetMapping({"/vuelos", "/filtrar"})
+    public ResponseEntity<List<ItinerarioVueloResponse>> obtenerVuelosFiltrados(
+            @Valid @ModelAttribute FiltroBusquedaRequest request) {
         return ResponseEntity.ok(filtroBusquedaService.filtrarYOrdenar(request));
     }
 }
