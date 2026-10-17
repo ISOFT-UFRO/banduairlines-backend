@@ -8,7 +8,7 @@ public record PeticionReservaResponse(
     @JsonProperty("fecha_salida") String fechaSalida,   // yyyy-MM-dd
     @JsonProperty("hora_salida") String horaSalida,     // HH:mm
     @JsonProperty("check_in") String checkIn,
-    String nombre,
-    String apellido,
+    @JsonProperty("nombres") String nombre,
+    @JsonProperty("apellidos") String apellido,
     String correo
 ) {}
