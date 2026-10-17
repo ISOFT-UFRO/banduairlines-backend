@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -39,4 +40,10 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
     Page<Reserva> findByUsuario_IdOrderByCreatedAtDescIdDesc(Long usuarioId, Pageable pageable);
 
     Page<Reserva> findByUsuario_IdAndEstadoOrderByCreatedAtDescIdDesc(Long usuarioId, EstadoReserva estado, Pageable pageable);
+
+public interface ReservaRepository extends JpaRepository<Reserva, Long>{
+
+    boolean existsByCodigoReserva(String codigoReserva);
+
+    List<Reserva> findByEstadoInAndExpiraEnBefore(Collection<EstadoReserva> estados, LocalDateTime limite);
 }
