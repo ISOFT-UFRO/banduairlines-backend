@@ -12,7 +12,7 @@ import com.banduairlines.dto.busqueda.AlternativaVueloResponse;
 import com.banduairlines.dto.busqueda.BusquedaVueloRequest;
 import com.banduairlines.dto.busqueda.OrdenVuelo;
 import com.banduairlines.dto.busqueda.VueloBusquedaResponse;
-import com.banduairlines.service.BusquedaService;
+import com.banduairlines.service.busqueda.BusquedaService;
 
 @RestController
 @RequestMapping("/api/v1/busqueda")

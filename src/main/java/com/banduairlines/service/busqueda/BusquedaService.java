@@ -1,4 +1,4 @@
-package com.banduairlines.service;
+package com.banduairlines.service.busqueda;
 
 import java.util.List;
 import com.banduairlines.dto.busqueda.AeropuertoBusquedaResponse;

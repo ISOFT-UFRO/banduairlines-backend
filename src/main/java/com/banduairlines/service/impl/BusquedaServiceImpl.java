@@ -28,7 +28,7 @@ import com.banduairlines.model.enums.EstadoVuelo;
 import com.banduairlines.repository.AeropuertoRepository;
 import com.banduairlines.repository.TarifaVueloRepository;
 import com.banduairlines.repository.VueloRepository;
-import com.banduairlines.service.BusquedaService;
+import com.banduairlines.service.busqueda.BusquedaService;
 
 @Service
 @Transactional(readOnly = true)
