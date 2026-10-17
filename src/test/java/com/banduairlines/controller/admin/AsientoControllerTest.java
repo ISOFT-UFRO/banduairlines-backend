@@ -1,126 +1,140 @@
 package com.banduairlines.controller.admin;
 
-import com.banduairlines.model.Asiento;
-import com.banduairlines.model.Avion;
+import com.banduairlines.dto.admin.AsientoResponse;
+import com.banduairlines.exception.GlobalExceptionHandler;
+import com.banduairlines.exception.RecursoNoEncontradoException;
 import com.banduairlines.model.enums.ClaseCabina;
 import com.banduairlines.service.admin.AsientoService;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
 import java.util.List;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
 class AsientoControllerTest {
 
-    @Mock
-    private AsientoService asientoService;
+        @Mock
+        private AsientoService asientoService;
 
-    @InjectMocks
-    private AsientoController asientoController;
+        @InjectMocks
+        private AsientoController asientoController;
 
-    private Asiento asientoEjemplo;
+        private MockMvc mockMvc;
 
-    @BeforeEach
-    void setUp() {
-        Avion avion = Avion.builder().id(1L).matricula("XA-123").build();
-        asientoEjemplo = Asiento.builder()
-                .id(10L)
-                .aeronave(avion)
-                .fila(1)
-                .letra("A")
-                .claseCabina(ClaseCabina.BUSINESS)
-                .esPreferente(true)
-                .build();
-    }
+        private final AsientoResponse respuestaEsperada = new AsientoResponse(
+                        10L, 1L, 1, "A", ClaseCabina.BUSINESS, true);
 
-    // ---------- GET: listarPorAeronave ----------
-
-    @Test
-    @DisplayName("GET sin claseCabina delega a obtenerAsientosPorAeronave")
-    void listarPorAeronave_sinClase() {
-        when(asientoService.obtenerAsientosPorAeronave(1L))
-                .thenReturn(List.of(asientoEjemplo));
-
-        ResponseEntity<List<Asiento>> respuesta =
-                asientoController.listarPorAeronave(1L, null);
-
-        assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(respuesta.getBody()).hasSize(1);
-        assertThat(respuesta.getBody().get(0).getLetra()).isEqualTo("A");
-
-        verify(asientoService).obtenerAsientosPorAeronave(1L);
-        verify(asientoService, never()).obtenerAsientosPorClase(anyLong(), any());
-    }
-
-    @Test
-    @DisplayName("GET con claseCabina delega a obtenerAsientosPorClase")
-    void listarPorAeronave_conClase() {
-        when(asientoService.obtenerAsientosPorClase(1L, ClaseCabina.BUSINESS))
-                .thenReturn(List.of(asientoEjemplo));
-
-        ResponseEntity<List<Asiento>> respuesta =
-                asientoController.listarPorAeronave(1L, ClaseCabina.BUSINESS);
-
-        assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(respuesta.getBody()).hasSize(1);
-        assertThat(respuesta.getBody().get(0).getClaseCabina())
-                .isEqualTo(ClaseCabina.BUSINESS);
-
-        verify(asientoService).obtenerAsientosPorClase(1L, ClaseCabina.BUSINESS);
-        verify(asientoService, never()).obtenerAsientosPorAeronave(anyLong());
-    }
-
-    @Test
-    @DisplayName("GET retorna lista vacía cuando no hay asientos")
-    void listarPorAeronave_listaVacia() {
-        when(asientoService.obtenerAsientosPorAeronave(99L)).thenReturn(List.of());
-
-        ResponseEntity<List<Asiento>> respuesta =
-                asientoController.listarPorAeronave(99L, null);
-
-        assertThat(respuesta.getBody()).isEmpty();
-    }
-
-    // ---------- POST: crearAsiento ----------
-
-    @Test
-    @DisplayName("POST retorna 201 CREATED con el asiento creado")
-    void crearAsiento_retorna201() {
-        when(asientoService.crearAsiento(1L, 1, "A", ClaseCabina.BUSINESS, true))
-                .thenReturn(asientoEjemplo);
-
-        ResponseEntity<Asiento> respuesta = asientoController.crearAsiento(
-                1L, 1, "A", ClaseCabina.BUSINESS, true);
-
-        assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(respuesta.getBody()).isNotNull();
-        assertThat(respuesta.getBody().getLetra()).isEqualTo("A");
-        assertThat(respuesta.getBody().getEsPreferente()).isTrue();
-
-        verify(asientoService).crearAsiento(1L, 1, "A", ClaseCabina.BUSINESS, true);
-    }
-
-    @Test
-    @DisplayName("POST propaga la excepción si el servicio falla")
-    void crearAsiento_servicioFalla() {
-        when(asientoService.crearAsiento(anyLong(), anyInt(), anyString(), any(), anyBoolean()))
-                .thenThrow(new RuntimeException("Aeronave no encontrada"));
-
-        try {
-            asientoController.crearAsiento(99L, 1, "A", ClaseCabina.BUSINESS, false);
-        } catch (RuntimeException ex) {
-            assertThat(ex.getMessage()).contains("Aeronave no encontrada");
+        @BeforeEach
+        void preparar() {
+                mockMvc = MockMvcBuilders.standaloneSetup(asientoController)
+                                .setControllerAdvice(new GlobalExceptionHandler())
+                                .build();
         }
 
-        verify(asientoService).crearAsiento(99L, 1, "A", ClaseCabina.BUSINESS, false);
-    }
+        @Test
+        void listarPorAeronave_sinClase() throws Exception {
+                when(asientoService.obtenerAsientosPorAeronave(1L))
+                                .thenReturn(List.of(respuestaEsperada));
+
+                mockMvc.perform(get("/api/v1/admin/asientos/aeronave/1"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.length()").value(1))
+                                .andExpect(jsonPath("$[0].id").value(10))
+                                .andExpect(jsonPath("$[0].aeronaveId").value(1))
+                                .andExpect(jsonPath("$[0].letra").value("A"))
+                                .andExpect(jsonPath("$[0].aeronave").doesNotExist());
+
+                verify(asientoService).obtenerAsientosPorAeronave(1L);
+                verifyNoMoreInteractions(asientoService);
+        }
+
+        @Test
+        void listarPorAeronave_conClase() throws Exception {
+                when(asientoService.obtenerAsientosPorClase(
+                                1L, ClaseCabina.BUSINESS))
+                                .thenReturn(List.of(respuestaEsperada));
+
+                mockMvc.perform(get("/api/v1/admin/asientos/aeronave/1")
+                                .param("claseCabina", "BUSINESS"))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.length()").value(1))
+                                .andExpect(jsonPath("$[0].claseCabina").value("BUSINESS"));
+
+                verify(asientoService).obtenerAsientosPorClase(
+                                1L, ClaseCabina.BUSINESS);
+                verifyNoMoreInteractions(asientoService);
+        }
+
+        @Test
+        void listarPorAeronave_listaVacia() throws Exception {
+                when(asientoService.obtenerAsientosPorAeronave(99L))
+                                .thenReturn(List.of());
+
+                mockMvc.perform(get("/api/v1/admin/asientos/aeronave/99"))
+                                .andExpect(status().isOk())
+                                .andExpect(content().json("[]"));
+
+                verify(asientoService).obtenerAsientosPorAeronave(99L);
+        }
+
+        @Test
+        void crearAsiento_retorna201() throws Exception {
+                when(asientoService.crearAsiento(
+                                1L, 1, "A", ClaseCabina.BUSINESS, true))
+                                .thenReturn(respuestaEsperada);
+
+                mockMvc.perform(post("/api/v1/admin/asientos")
+                                .param("aeronaveId", "1")
+                                .param("fila", "1")
+                                .param("letra", "A")
+                                .param("claseCabina", "BUSINESS")
+                                .param("esPreferente", "true"))
+                                .andExpect(status().isCreated())
+                                .andExpect(jsonPath("$.id").value(10))
+                                .andExpect(jsonPath("$.aeronaveId").value(1))
+                                .andExpect(jsonPath("$.letra").value("A"))
+                                .andExpect(jsonPath("$.esPreferente").value(true))
+                                .andExpect(jsonPath("$.aeronave").doesNotExist());
+
+                verify(asientoService).crearAsiento(
+                                1L, 1, "A", ClaseCabina.BUSINESS, true);
+        }
+
+        @Test
+        void crearAsiento_aeronaveInexistenteRetorna404() throws Exception {
+                when(asientoService.crearAsiento(
+                                99L, 1, "A", ClaseCabina.BUSINESS, false))
+                                .thenThrow(new RecursoNoEncontradoException(
+                                                "Aeronave no encontrada: 99"));
+
+                mockMvc.perform(post("/api/v1/admin/asientos")
+                                .param("aeronaveId", "99")
+                                .param("fila", "1")
+                                .param("letra", "A")
+                                .param("claseCabina", "BUSINESS")
+                                .param("esPreferente", "false"))
+                                .andExpect(status().isNotFound())
+                                .andExpect(jsonPath("$.code")
+                                                .value("RECURSO_NO_ENCONTRADO"))
+                                .andExpect(jsonPath("$.message")
+                                                .value("Aeronave no encontrada: 99"));
+
+                verify(asientoService).crearAsiento(
+                                99L, 1, "A", ClaseCabina.BUSINESS, false);
+        }
 }
