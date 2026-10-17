@@ -1,5 +1,7 @@
 package com.banduairlines.service.reserva;
 
+import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -9,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import com.banduairlines.model.Asiento;
 import com.banduairlines.model.Boleto;
+import com.banduairlines.model.BoletoExtra;
 import com.banduairlines.model.Extra;
 import com.banduairlines.model.PackTarifario;
 import com.banduairlines.model.enums.TipoExtra;
@@ -77,6 +80,65 @@ public class AsientosReserva {
             return List.of();
         }
         return List.of(columnas.get(columnas.size() / 2 - 1));
+    }
+
+    /**
+     * true si todos los asientos están en la misma fila, uno al lado del otro y sin un pasillo entre medio.
+     * La vecindad se mide con las letras que realmente tiene esa fila (en BUSINESS, A y C son vecinos).
+     */
+    public static boolean contiguos(List<Asiento> grupo, List<Asiento> asientosDeLaAeronave) {
+        if (grupo.size() <= 1) {
+            return true;
+        }
+        Integer fila = grupo.get(0).getFila();
+        if (grupo.stream().anyMatch(a -> !a.getFila().equals(fila))) {
+            return false;
+        }
+        List<String> letrasFila = asientosDeLaAeronave.stream()
+                .filter(a -> a.getFila().equals(fila))
+                .map(Asiento::getLetra)
+                .sorted()
+                .toList();
+        List<String> pasillos = pasillosDespuesDe(columnas(asientosDeLaAeronave));
+        List<Integer> posiciones = grupo.stream()
+                .map(a -> letrasFila.indexOf(a.getLetra()))
+                .sorted(Comparator.naturalOrder())
+                .toList();
+        for (int i = 1; i < posiciones.size(); i++) {
+            int anterior = posiciones.get(i - 1);
+            if (posiciones.get(i) != anterior + 1 || pasillos.contains(letrasFila.get(anterior))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Deja el boleto con este asiento (o sin asiento si es null) y con su cobro: cobro es el Extra
+     * ASIENTO_PREFERENTE si el asiento se cobra, o null si no tiene costo. El cobro que se mantiene se actualiza
+     * en el mismo registro: Hibernate inserta antes de borrar, así que borrar y volver a crear la misma clave
+     * compuesta fallaría (ver ReservaServiciosServiceImpl).
+     */
+    public static void asignar(Boleto boleto, Asiento asiento, Extra cobro) {
+        boleto.setAsientoId(asiento);
+        Extra pendiente = asiento == null ? null : cobro;
+        Iterator<BoletoExtra> it = boleto.getExtras().iterator();
+        while (it.hasNext()) {
+            BoletoExtra actual = it.next();
+            if (actual.getExtra().getTipo() != TipoExtra.ASIENTO_PREFERENTE) {
+                continue;
+            }
+            if (pendiente != null && pendiente.getId().equals(actual.getExtra().getId())) {
+                actual.setCantidad(1);
+                actual.setPrecioUnitario(pendiente.getPrecio());
+                pendiente = null;
+            } else {
+                it.remove();
+            }
+        }
+        if (pendiente != null) {
+            boleto.addExtra(pendiente, 1, pendiente.getPrecio());
+        }
     }
 
     /** Deja el boleto sin asiento y sin el cobro de asiento preferente (cancelacion). */
