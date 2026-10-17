@@ -178,4 +178,17 @@ class RutaControllerTest {
                 verify(servicio).listarTodas(null);
                 verifyNoMoreInteractions(servicio);
         }
+
+        @Test
+        void cambiarEstadoRechazaCampoAusente() throws Exception {
+                mockMvc.perform(patch("/api/v1/admin/rutas/10/estado")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{}"))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.code").value("VALIDACION"))
+                                .andExpect(jsonPath(
+                                                "$.details[?(@.campo == 'activa')]").exists());
+
+                verifyNoInteractions(servicio);
+        }
 }

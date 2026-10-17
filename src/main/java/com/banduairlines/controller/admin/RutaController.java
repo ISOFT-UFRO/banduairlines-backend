@@ -24,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 import com.banduairlines.dto.admin.RutaResponse;
 import com.banduairlines.dto.admin.RutaRequest;
 import com.banduairlines.service.admin.RutaService;
+import com.banduairlines.dto.admin.EstadoRutaRequest;
 
 @RestController
 @RequestMapping("/api/v1/admin/rutas")
@@ -31,9 +32,6 @@ import com.banduairlines.service.admin.RutaService;
 @Validated
 @PreAuthorize("hasRole('ADMINISTRADOR')")
 public class RutaController {
-
-    public record EstadoRutaRequest(boolean activa) {
-    }
 
     private final RutaService rutaService;
 
