@@ -1,105 +1,115 @@
 package com.banduairlines.service.reserva;
 
-import com.banduairlines.dto.reserva.ResultadoPagoRequest;
-import com.banduairlines.dto.reserva.ResultadoPagoResponse;
-import com.banduairlines.exception.ConflictoException;
-import com.banduairlines.exception.RecursoNoEncontradoException;
-import com.banduairlines.model.Boleto;
-import com.banduairlines.model.Reserva;
-import com.banduairlines.model.enums.EstadoReserva;
-import com.banduairlines.repository.BoletoRepository;
-import com.banduairlines.repository.ReservaRepository;
-import com.banduairlines.service.impl.ReservaResultadoPagoServiceImpl;
-import com.banduairlines.service.reserva.ClaveServicioInterna;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import java.util.Optional;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import com.banduairlines.dto.reserva.ResultadoPagoRequest;
+import com.banduairlines.exception.ConflictoException;
+import com.banduairlines.exception.RecursoNoEncontradoException;
+import com.banduairlines.model.Reserva;
+import com.banduairlines.model.enums.EstadoReserva;
+import com.banduairlines.repository.ReservaRepository;
+import com.banduairlines.service.impl.ReservaResultadoPagoServiceImpl;
 
 @ExtendWith(MockitoExtension.class)
 class ReservaResultadoPagoServiceImplTest {
 
-    @Mock
-    private ReservaRepository reservaRepository;
+    @Mock private ReservaRepository reservaRepository;
 
-    @Mock
-    private BoletoRepository boletoRepository;
-
-    @Mock
-    private ClaveServicioInterna claveServicioInterna;
-
-    @InjectMocks
     private ReservaResultadoPagoServiceImpl service;
-
     private Reserva reserva;
-    private ResultadoPagoRequest requestValida;
 
     @BeforeEach
     void setUp() {
-        reserva = new Reserva();
-        reserva.setId(1L);
-        reserva.setTotal(new BigDecimal("150000"));
-        reserva.setEstado(EstadoReserva.PENDIENTE_PAGO);
-
-        requestValida = new ResultadoPagoRequest(
-                "PAGO-123",
-                "TX-999",
-                "PAGADO",
-                150000L,
-                LocalDateTime.now(),
-                null
-        );
+        service = new ReservaResultadoPagoServiceImpl(reservaRepository, new TransaccionesPagoProvisional());
+        reserva = Reserva.builder().id(1L).codigoReserva("ABC123").estado(EstadoReserva.PENDIENTE_PAGO)
+                .total(new BigDecimal("150000")).build();
     }
 
     @Test
-    void cuandoPagoEsExitoso_debeConfirmarReservaYAsientos() {
-        doNothing().when(claveServicioInterna).exigirCoincidencia("key-secret");
-        when(reservaRepository.findById(1L)).thenReturn(Optional.of(reserva));
-        
-        Boleto boleto = new Boleto();
-        when(boletoRepository.findByReserva_IdOrderByOrdenTramoAscIdAsc(1L)).thenReturn(List.of(boleto));
-        when(reservaRepository.save(any(Reserva.class))).thenAnswer(i -> i.getArgument(0));
+    void pagado_conElTotal_confirmaLaReserva() {
+        when(reservaRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(reserva));
 
-        ResultadoPagoResponse response = service.registrarResultadoPago(1L, requestValida, "key-secret");
-
-        assertNotNull(response);
-        assertEquals(EstadoReserva.CONFIRMADA, response.estado());
-        assertTrue(boleto.isAsientoConfirmado());
+        assertThat(service.registrar(1L, pagado("TX-1", 150000)).estado()).isEqualTo(EstadoReserva.CONFIRMADA);
+        assertThat(reserva.getEstado()).isEqualTo(EstadoReserva.CONFIRMADA);
         verify(reservaRepository).save(reserva);
     }
 
     @Test
-    void cuandoMontoNoCoincide_debeLanzarConflictoException() {
-        doNothing().when(claveServicioInterna).exigirCoincidencia("key-secret");
-        when(reservaRepository.findById(1L)).thenReturn(Optional.of(reserva));
+    void pagado_repetidoDeLaMismaTransaccion_respondeIgualSinVolverAConfirmar() {
+        when(reservaRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(reserva));
+        service.registrar(1L, pagado("TX-1", 150000));
 
-        ResultadoPagoRequest requestMontoIncorrecto = new ResultadoPagoRequest(
-                "PAGO-123", "TX-999", "PAGADO", 100000L, LocalDateTime.now(), null
-        );
-
-        assertThrows(ConflictoException.class, () ->
-                service.registrarResultadoPago(1L, requestMontoIncorrecto, "key-secret")
-        );
+        assertThat(service.registrar(1L, pagado("TX-1", 150000)).estado()).isEqualTo(EstadoReserva.CONFIRMADA);
+        verify(reservaRepository, times(1)).save(reserva);
     }
 
     @Test
-    void cuandoReservaNoExiste_debeLanzarRecursoNoEncontradoException() {
-        doNothing().when(claveServicioInterna).exigirCoincidencia("key-secret");
-        when(reservaRepository.findById(99L)).thenReturn(Optional.empty());
+    void pagado_deOtraTransaccionSobreReservaConfirmada_lanzaEstadoInvalido() {
+        when(reservaRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(reserva));
+        service.registrar(1L, pagado("TX-1", 150000));
 
-        assertThrows(RecursoNoEncontradoException.class, () ->
-                service.registrarResultadoPago(99L, requestValida, "key-secret")
-        );
+        assertThatThrownBy(() -> service.registrar(1L, pagado("TX-2", 150000)))
+                .isInstanceOfSatisfying(ConflictoException.class,
+                        e -> assertThat(e.getCodigo()).isEqualTo(ReservaAcceso.ESTADO_INVALIDO));
+    }
+
+    @Test
+    void pagado_montoDistinto_lanzaMontoNoCoincideSinConfirmar() {
+        when(reservaRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(reserva));
+
+        assertThatThrownBy(() -> service.registrar(1L, pagado("TX-1", 100000)))
+                .isInstanceOfSatisfying(ConflictoException.class,
+                        e -> assertThat(e.getCodigo()).isEqualTo("MONTO_NO_COINCIDE"));
+        assertThat(reserva.getEstado()).isEqualTo(EstadoReserva.PENDIENTE_PAGO);
+        verify(reservaRepository, never()).save(any());
+    }
+
+    @Test
+    void pagado_reservaCancelada_lanzaEstadoInvalido() {
+        reserva.setEstado(EstadoReserva.CANCELADA);
+        when(reservaRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(reserva));
+
+        assertThatThrownBy(() -> service.registrar(1L, pagado("TX-1", 150000)))
+                .isInstanceOfSatisfying(ConflictoException.class,
+                        e -> assertThat(e.getCodigo()).isEqualTo(ReservaAcceso.ESTADO_INVALIDO));
+    }
+
+    @Test
+    void rechazado_mantieneLaReservaPendienteDePago() {
+        when(reservaRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(reserva));
+        ResultadoPagoRequest rechazo = new ResultadoPagoRequest("PAGO-1", null, ResultadoPagoRequest.Estado.RECHAZADO,
+                150000L, OffsetDateTime.now(), "Fondos insuficientes");
+
+        assertThat(service.registrar(1L, rechazo).estado()).isEqualTo(EstadoReserva.PENDIENTE_PAGO);
+        verify(reservaRepository, never()).save(any());
+    }
+
+    @Test
+    void reservaInexistente_lanza404() {
+        when(reservaRepository.findByIdForUpdate(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.registrar(99L, pagado("TX-1", 150000)))
+                .isInstanceOf(RecursoNoEncontradoException.class);
+    }
+
+    private static ResultadoPagoRequest pagado(String transaccionId, long montoCLP) {
+        return new ResultadoPagoRequest("PAGO-1", transaccionId, ResultadoPagoRequest.Estado.PAGADO, montoCLP,
+                OffsetDateTime.now(), null);
     }
 }
