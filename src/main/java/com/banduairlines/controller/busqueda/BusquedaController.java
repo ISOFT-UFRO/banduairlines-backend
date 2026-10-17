@@ -23,7 +23,7 @@ public class BusquedaController {
         this.busqueda = busqueda;
     }
 
-    @GetMapping("/vuelos")
+    @GetMapping("/vuelos/buscar")
     public List<VueloBusquedaResponse> buscarVuelos(@Valid @ModelAttribute BusquedaVueloRequest criterios) {
         return busqueda.buscarVuelos(criterios);
     }
