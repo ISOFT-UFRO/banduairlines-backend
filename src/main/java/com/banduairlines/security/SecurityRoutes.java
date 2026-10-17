@@ -13,7 +13,11 @@ public final class SecurityRoutes {
             "/actuator/health",               // INTEGRA: healthcheck del despliegue (Actuator)
             "/actuator/health/**",
             API + "/auth/**",                 // CUENTA: login y registro
-            API + "/pagos/notificaciones"     // PAGOS: callback servidor-a-servidor de Flow (no trae token)
+            API + "/pagos/notificaciones",    // PAGOS: callback servidor-a-servidor de Flow (no trae token)
+            API + "/reservas/*/servicios",    // RESERVA: endpoints 7 a 12 del invitado (sin JWT, con X-Compra-Token).
+            API + "/reservas/*/promocion",    //   El servicio valida el token de la compra o el JWT del dueño
+            API + "/reservas/*/pago",         //   (ReservaAcceso) y responde 401/403 si no corresponde.
+            API + "/reservas/*/cancelacion"
     };
 
     /** Públicas solo para GET. */
