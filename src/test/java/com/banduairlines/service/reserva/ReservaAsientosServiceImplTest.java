@@ -32,13 +32,17 @@ import com.banduairlines.model.enums.TipoExtra;
 import com.banduairlines.model.enums.TipoPasajero;
 import com.banduairlines.repository.BoletoRepository;
 import com.banduairlines.repository.CatalogoReservaRepository;
+import com.banduairlines.repository.ReservaRepository;
 import com.banduairlines.service.impl.ReservaAsientosServiceImpl;
 
+/** Mapa de asientos (endpoint 6). La selección (6b) está en ReservaAsientosSeleccionTest. */
 @ExtendWith(MockitoExtension.class)
 class ReservaAsientosServiceImplTest {
 
     @Mock
     private ReservaAcceso reservaAcceso;
+    @Mock
+    private ReservaRepository reservaRepository;
     @Mock
     private BoletoRepository boletoRepository;
     @Mock
@@ -56,8 +60,8 @@ class ReservaAsientosServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        service = new ReservaAsientosServiceImpl(reservaAcceso, boletoRepository, catalogoReservaRepository,
-                new AsientosReserva(catalogoReservaRepository));
+        service = new ReservaAsientosServiceImpl(reservaAcceso, reservaRepository, boletoRepository, catalogoReservaRepository,
+                new AsientosReserva(catalogoReservaRepository), new CalculadoraTotalReserva());
         reserva = CompraReservaFixtures.reserva(EstadoReserva.PENDIENTE_PAGO);
         usarPack(CompraReservaFixtures.packLight());
 
