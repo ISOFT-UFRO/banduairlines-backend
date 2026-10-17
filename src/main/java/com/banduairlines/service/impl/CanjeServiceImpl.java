@@ -38,12 +38,13 @@ public class CanjeServiceImpl implements CanjeService {
     private final ActualizacionFidelizacionService actualizacion;
     private final EvaluadorBeneficio evaluador;
     private final UsuarioActual usuarioActual;
+    private final MapeadorFidelizacion mapeador;
     private final Clock reloj;
 
     public CanjeServiceImpl(CuentaPuntosRepository cuentas, BeneficioRepository beneficios,
                             HistorialPuntosRepository historial, RegistroPuntosRepository registros,
                             ActualizacionFidelizacionService actualizacion, EvaluadorBeneficio evaluador,
-                            UsuarioActual usuarioActual, Clock reloj) {
+                            UsuarioActual usuarioActual, MapeadorFidelizacion mapeador, Clock reloj) {
         this.cuentas = cuentas;
         this.beneficios = beneficios;
         this.historial = historial;
@@ -51,6 +52,7 @@ public class CanjeServiceImpl implements CanjeService {
         this.actualizacion = actualizacion;
         this.evaluador = evaluador;
         this.usuarioActual = usuarioActual;
+        this.mapeador = mapeador;
         this.reloj = reloj;
     }
 
@@ -99,19 +101,13 @@ public class CanjeServiceImpl implements CanjeService {
                 ReferenciaCanje.crear(clave, idBeneficio),
                 null
         ));
-        long saldoFinal = estado.saldoPuntos() - beneficio.getCostoPuntos();
-        return new ResultadoCanje(new RespuestaCanje(
-                canje.getIdRegistro(),
-                beneficio.getIdBeneficio(),
-                beneficio.getNombre(),
-                canje.getCantidad(),
-                saldoFinal,
-                canje.getFecha()
-        ), true);
+        long saldoAnterior = estado.saldoPuntos();
+        return new ResultadoCanje(respuesta(canje, saldoAnterior, beneficio.getNombre()), true);
     }
 
     /**
-     * La misma clave con el mismo beneficio devuelve el canje original sin registrar otro.
+     * La misma clave con el mismo beneficio devuelve la misma respuesta del canje original
+     * (mismo idCanje, mismos saldos y mismo movimiento) sin registrar otro ni descontar otra vez.
      * La misma clave con otro beneficio es un conflicto.
      */
     private ResultadoCanje canjeRepetido(RegistroPuntos anterior, Long idBeneficio, Long idUsuario) {
@@ -121,14 +117,19 @@ public class CanjeServiceImpl implements CanjeService {
                     .conCodigo(CodigosFidelizacion.CANJE_DUPLICADO);
         }
         String nombre = beneficios.findById(idBeneficio).map(Beneficio::getNombre).orElse(null);
-        return new ResultadoCanje(new RespuestaCanje(
-                anterior.getIdRegistro(),
-                idBeneficio,
-                nombre,
-                anterior.getCantidad(),
-                registros.calcularSaldo(idUsuario),
-                anterior.getFecha()
-        ), false);
+        long saldoDespues = historial.calcularSaldoHasta(idUsuario, anterior.getIdRegistro());
+        long saldoAnterior = saldoDespues + anterior.getCantidad();
+        return new ResultadoCanje(respuesta(anterior, saldoAnterior, nombre), false);
+    }
+
+    private RespuestaCanje respuesta(RegistroPuntos canje, long saldoAnterior, String nombreBeneficio) {
+        return new RespuestaCanje(
+                canje.getIdRegistro(),
+                saldoAnterior,
+                canje.getCantidad(),
+                saldoAnterior - canje.getCantidad(),
+                mapeador.movimientoCanje(canje, nombreBeneficio)
+        );
     }
 
     private static String mensaje(MotivoBloqueo motivo) {

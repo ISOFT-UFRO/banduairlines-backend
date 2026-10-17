@@ -43,8 +43,10 @@ public class CanjeController {
             summary = "Canjear puntos por un beneficio",
             description = "Solo PASAJERO. Valida que el beneficio exista, esté disponible, que el nivel alcance y que "
                     + "haya puntos suficientes, y registra un movimiento CANJE. No modifica millas ni baja el nivel. "
-                    + "Repetir la misma Clave-Idempotencia con el mismo beneficio devuelve el canje original (200) "
-                    + "sin descontar puntos otra vez; con otro beneficio responde 409 CANJE_DUPLICADO."
+                    + "Reintentos: si se repite la misma Clave-Idempotencia con el mismo beneficio, responde 200 con "
+                    + "exactamente la misma respuesta del canje original (mismo idCanje, saldoAnterior, "
+                    + "puntosDescontados, saldoActual y movimiento) y no descuenta puntos otra vez. Si la clave ya se "
+                    + "usó con otro beneficio, responde 409 CANJE_DUPLICADO."
     )
     @io.swagger.v3.oas.annotations.parameters.RequestBody(
             required = true,
@@ -55,7 +57,7 @@ public class CanjeController {
     )
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Canje registrado"),
-            @ApiResponse(responseCode = "200", description = "Clave repetida: se devuelve el canje original"),
+            @ApiResponse(responseCode = "200", description = "Reintento con la misma clave y el mismo beneficio: misma respuesta del canje original, sin nuevo descuento"),
             @ApiResponse(responseCode = "400", description = "VALIDACION: falta idBeneficio o la Clave-Idempotencia, o tiene un formato inválido", content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "401", description = "NO_AUTENTICADO", content = @Content(schema = @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "403", description = "ACCESO_DENEGADO: el rol no participa en fidelización", content = @Content(schema = @Schema(implementation = ApiError.class))),

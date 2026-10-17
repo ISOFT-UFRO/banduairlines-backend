@@ -53,7 +53,8 @@ public class FidelizacionController {
     @GetMapping("/movimientos")
     @Operation(
             summary = "Listar el historial de puntos",
-            description = "Solo PASAJERO. Acumulaciones y canjes paginados, del más reciente al más antiguo."
+            description = "Solo PASAJERO. Acumulaciones y canjes paginados, del más reciente al más antiguo. "
+                    + "cantidadPuntos es positivo en una acumulación y negativo en un canje."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Página de movimientos"),

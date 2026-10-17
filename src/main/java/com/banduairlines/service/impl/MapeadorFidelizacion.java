@@ -54,27 +54,41 @@ public class MapeadorFidelizacion {
                 : beneficios.findAllById(idsBeneficio).stream()
                         .collect(Collectors.toMap(Beneficio::getIdBeneficio, Beneficio::getNombre));
         return registros.stream()
-                .map(registro -> movimiento(registro, nombres))
+                .map(registro -> {
+                    Long idBeneficio = ReferenciaCanje.idBeneficio(registro.getReferencia()).orElse(null);
+                    return movimiento(registro, idBeneficio == null ? null : nombres.get(idBeneficio));
+                })
                 .toList();
     }
 
-    private static RespuestaMovimientoPuntos movimiento(RegistroPuntos registro, Map<Long, String> nombres) {
+    /** Movimiento de un canje recién registrado, cuando ya se conoce el nombre del beneficio. */
+    public RespuestaMovimientoPuntos movimientoCanje(RegistroPuntos canje, String nombreBeneficio) {
+        return movimiento(canje, nombreBeneficio);
+    }
+
+    /**
+     * En la base la cantidad siempre es positiva y el tipo indica si suma o resta.
+     * En la API, cantidadPuntos lleva el signo: positivo al acumular y negativo al canjear.
+     */
+    private static RespuestaMovimientoPuntos movimiento(RegistroPuntos registro, String nombreBeneficio) {
         Long idBeneficio = ReferenciaCanje.idBeneficio(registro.getReferencia()).orElse(null);
+        long cantidadPuntos = registro.getTipo() == TipoRegistroPuntos.CANJE
+                ? -registro.getCantidad()
+                : registro.getCantidad();
         return new RespuestaMovimientoPuntos(
                 registro.getIdRegistro(),
                 registro.getTipo(),
-                registro.getCantidad(),
+                cantidadPuntos,
                 registro.getFecha(),
-                descripcion(registro, idBeneficio, nombres),
+                descripcion(registro, nombreBeneficio),
                 registro.getCodigoPNR(),
                 idBeneficio
         );
     }
 
-    private static String descripcion(RegistroPuntos registro, Long idBeneficio, Map<Long, String> nombres) {
+    private static String descripcion(RegistroPuntos registro, String nombreBeneficio) {
         if (registro.getTipo() == TipoRegistroPuntos.CANJE) {
-            String nombre = idBeneficio == null ? null : nombres.get(idBeneficio);
-            return nombre == null ? "Canje de beneficio" : "Canje de " + nombre;
+            return nombreBeneficio == null ? "Canje de beneficio" : "Canje de " + nombreBeneficio;
         }
         String referencia = registro.getReferencia();
         if (referencia != null && referencia.startsWith(PREFIJO_VUELO)) {
