@@ -40,4 +40,6 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
     Page<Reserva> findByUsuario_IdOrderByCreatedAtDescIdDesc(Long usuarioId, Pageable pageable);
 
     Page<Reserva> findByUsuario_IdAndEstadoOrderByCreatedAtDescIdDesc(Long usuarioId, EstadoReserva estado, Pageable pageable);
+//pago repository
+    Optional<Reserva> findByCodigoReservaIgnoreCase(String codigoReserva);
 }

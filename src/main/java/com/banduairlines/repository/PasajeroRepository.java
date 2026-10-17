@@ -14,4 +14,6 @@ public interface PasajeroRepository extends JpaRepository<Pasajero, Long>{
     long countByReserva_Id(Long reservaId);
 
     List<Pasajero> findByReservaId(Long id);
+//pagos
+    List<Pasajero> findByReservaIdOrderByIdAsc(Long reservaId);
 }
