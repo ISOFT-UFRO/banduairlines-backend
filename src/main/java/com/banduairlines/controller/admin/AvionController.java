@@ -2,7 +2,8 @@ package com.banduairlines.controller.admin;
 
 import com.banduairlines.dto.admin.AvionRequestDto;
 import com.banduairlines.dto.admin.AvionResponseDto;
-import com.banduairlines.service.admin.AvionService;
+import com.banduairlines.service.impl.AvionServiceImpl;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -14,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AvionController {
 
-    public final AvionService avionService;
+    private final AvionServiceImpl avionService;
 
     @PostMapping
     public ResponseEntity<AvionResponseDto> crearAvion(@Valid @RequestBody AvionRequestDto request) {

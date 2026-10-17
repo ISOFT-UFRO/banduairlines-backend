@@ -1,22 +1,21 @@
-package com.banduairlines.controller.integra;
+package com.banduairlines.service.impl;
 
 import com.banduairlines.dto.admin.AsientoRequestDto;
 import com.banduairlines.dto.admin.AvionRequestDto;
 import com.banduairlines.dto.admin.AvionResponseDto;
 import com.banduairlines.exception.ConflictoException;
 import com.banduairlines.exception.RecursoNoEncontradoException;
-import com.banduairlines.model.Asiento;
 import com.banduairlines.model.Avion;
 import com.banduairlines.model.enums.ClaseCabina;
 import com.banduairlines.model.enums.Estado;
 import com.banduairlines.repository.AsientoRepository;
 import com.banduairlines.repository.AvionRepository;
-import com.banduairlines.service.admin.AvionService;
+import com.banduairlines.service.impl.AvionServiceImplTest;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -28,10 +27,11 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class AvionServiceTest {
+class AvionServiceImplTest {
 
     @Mock
     private AvionRepository avionRepository;
@@ -40,7 +40,7 @@ class AvionServiceTest {
     private AsientoRepository asientoRepository;
 
     @InjectMocks
-    private AvionService avionService;
+    private AvionServiceImpl avionService;
 
     private AvionRequestDto requestDto;
     private Avion avionGuardado;
