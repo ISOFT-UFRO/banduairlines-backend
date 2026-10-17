@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -40,7 +41,7 @@ class TrackingTableroControllerTest {
     @Test
     void tableroDelDia_conAdmin_devuelve200ConLista() throws Exception {
         LocalDateTime salida = LocalDateTime.of(2026, 10, 16, 10, 0);
-        when(tableroService.tableroDelDia(null)).thenReturn(List.of(
+        when(tableroService.tableroDelDia(null, null)).thenReturn(List.of(
                 new ResumenVueloDTO(1L, 100L, "BD001", "SCL", "PMC", salida,
                         EstadoVuelo.PROGRAMADO, 0, salida.minusMinutes(5))
         ));
@@ -59,7 +60,7 @@ class TrackingTableroControllerTest {
     @Test
     void tableroDelDia_conFiltroEstado_devuelve200() throws Exception {
         LocalDateTime salida = LocalDateTime.of(2026, 10, 16, 14, 0);
-        when(tableroService.tableroDelDia(EstadoVuelo.EN_VUELO)).thenReturn(List.of(
+        when(tableroService.tableroDelDia(null, EstadoVuelo.EN_VUELO)).thenReturn(List.of(
                 new ResumenVueloDTO(2L, 101L, "BD002", "SCL", "CJC", salida,
                         EstadoVuelo.EN_VUELO, 0, salida.minusMinutes(2))
         ));
@@ -69,6 +70,24 @@ class TrackingTableroControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].codigoVuelo").value("BD002"))
                 .andExpect(jsonPath("$[0].estadoActual").value("EN_VUELO"));
+    }
+
+    @Test
+    void tableroDelDia_conFecha_propagaFechaAlServicio() throws Exception {
+        when(tableroService.tableroDelDia(LocalDate.of(2026, 10, 20), null)).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/v1/admin/tracking/tablero?fecha=2026-10-20")
+                .with(user("admin").roles("ADMINISTRADOR")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void tableroDelDia_conFechaInvalida_devuelve400() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/tracking/tablero?fecha=20-10-2026")
+                .with(user("admin").roles("ADMINISTRADOR")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("PETICION_MALFORMADA"));
+        verifyNoInteractions(tableroService);
     }
 
     @Test

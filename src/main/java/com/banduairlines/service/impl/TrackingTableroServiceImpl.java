@@ -29,10 +29,10 @@ public class TrackingTableroServiceImpl implements TrackingTableroService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ResumenVueloDTO> tableroDelDia(EstadoVuelo estado) {
-        LocalDate hoy = relojOperacional.hoy();
-        LocalDateTime desde = hoy.atStartOfDay();
-        LocalDateTime hasta = hoy.plusDays(1).atStartOfDay();
+    public List<ResumenVueloDTO> tableroDelDia(LocalDate fecha, EstadoVuelo estado) {
+        LocalDate fechaTablero = fecha != null ? fecha : relojOperacional.hoy();
+        LocalDateTime desde = fechaTablero.atStartOfDay();
+        LocalDateTime hasta = fechaTablero.plusDays(1).atStartOfDay();
         List<SeguimientoVuelo> seguimientos = seguimientoRepository.tablero(desde, hasta, estado);
         return seguimientos.stream()
                 .map(TrackingMapper::aResumenDTO)

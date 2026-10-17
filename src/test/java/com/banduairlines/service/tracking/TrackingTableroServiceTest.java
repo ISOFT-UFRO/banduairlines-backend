@@ -5,6 +5,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
@@ -75,7 +76,7 @@ class TrackingTableroServiceTest {
                 null))
                 .thenReturn(List.of(s1, s2));
 
-        var resultado = tableroService.tableroDelDia(null);
+        var resultado = tableroService.tableroDelDia(null, null);
 
         assertThat(resultado).hasSize(2);
         assertThat(resultado.get(0).codigoVuelo()).isEqualTo("BD001");
@@ -106,7 +107,7 @@ class TrackingTableroServiceTest {
                 EstadoVuelo.EN_VUELO))
                 .thenReturn(List.of(s));
 
-        var resultado = tableroService.tableroDelDia(EstadoVuelo.EN_VUELO);
+        var resultado = tableroService.tableroDelDia(null, EstadoVuelo.EN_VUELO);
 
         assertThat(resultado).hasSize(1);
         assertThat(resultado.get(0).codigoVuelo()).isEqualTo("BD003");
@@ -121,8 +122,34 @@ class TrackingTableroServiceTest {
                 null))
                 .thenReturn(List.of());
 
-        var resultado = tableroService.tableroDelDia(null);
+        var resultado = tableroService.tableroDelDia(null, null);
 
         assertThat(resultado).isEmpty();
+    }
+
+    @Test
+    void tableroDelDia_conFecha_usaRangoDeLaFechaDada() {
+        LocalDateTime salida = LocalDateTime.of(2026, 10, 20, 8, 0);
+        SeguimientoVuelo s = org.mockito.Mockito.mock(SeguimientoVuelo.class, org.mockito.Mockito.withSettings().lenient());
+        org.mockito.Mockito.when(s.getId()).thenReturn(4L);
+        org.mockito.Mockito.when(s.getVueloId()).thenReturn(104L);
+        org.mockito.Mockito.when(s.getCodigoVuelo()).thenReturn("BD004");
+        org.mockito.Mockito.when(s.getOrigenIata()).thenReturn("SCL");
+        org.mockito.Mockito.when(s.getDestinoIata()).thenReturn("LSC");
+        org.mockito.Mockito.when(s.getSalidaProgramada()).thenReturn(salida);
+        org.mockito.Mockito.when(s.getEstadoActual()).thenReturn(EstadoVuelo.PROGRAMADO);
+        org.mockito.Mockito.when(s.retrasoVigente()).thenReturn(0);
+        org.mockito.Mockito.when(s.getUltimaActualizacion()).thenReturn(salida.minusMinutes(1));
+
+        when(seguimientoRepository.tablero(
+                LocalDateTime.of(2026, 10, 20, 0, 0),
+                LocalDateTime.of(2026, 10, 21, 0, 0),
+                null))
+                .thenReturn(List.of(s));
+
+        var resultado = tableroService.tableroDelDia(LocalDate.of(2026, 10, 20), null);
+
+        assertThat(resultado).singleElement()
+                .satisfies(v -> assertThat(v.codigoVuelo()).isEqualTo("BD004"));
     }
 }

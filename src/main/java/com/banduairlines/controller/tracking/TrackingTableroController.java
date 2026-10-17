@@ -1,7 +1,9 @@
 package com.banduairlines.controller.tracking;
 
+import java.time.LocalDate;
 import java.util.List;
 
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -52,7 +54,8 @@ public class TrackingTableroController {
     @ApiResponse(responseCode = "403", description = "ACCESO_DENEGADO",
             content = @Content(schema = @Schema(implementation = ApiError.class)))
     public List<ResumenVueloDTO> tableroDelDia(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha,
             @RequestParam(required = false) EstadoVuelo estado) {
-        return tableroService.tableroDelDia(estado);
+        return tableroService.tableroDelDia(fecha, estado);
     }
 }
