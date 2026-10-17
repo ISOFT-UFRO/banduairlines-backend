@@ -1,6 +1,9 @@
 package com.banduairlines.dto.cuenta;
 
+import com.banduairlines.model.enums.TipoDocumento;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Null;
@@ -15,6 +18,12 @@ public record SolicitudRegistro(
         @NotBlank(message = "Los apellidos son obligatorios")
         @Size(max = 80, message = "Los apellidos no pueden superar 80 caracteres")
         String apellidos,
+
+        TipoDocumento tipoDocumento,
+
+        @Size(max = 30, message = "El numero de documento no puede superar 30 caracteres")
+        @Pattern(regexp = "[\\p{L}\\p{N}.-]+", message = "El numero de documento contiene caracteres no permitidos")
+        String numeroDocumento,
 
         @NotBlank(message = "El correo es obligatorio")
         @Email(message = "El correo debe tener un formato valido")
@@ -41,6 +50,15 @@ public record SolicitudRegistro(
 ) {
     public SolicitudRegistro {
         correo = correo == null ? null : correo.trim();
+        numeroDocumento = numeroDocumento == null ? null : numeroDocumento.trim().toUpperCase(java.util.Locale.ROOT);
+    }
+
+    @AssertTrue(message = "El tipo y el numero de documento deben enviarse juntos")
+    @JsonIgnore
+    @Schema(hidden = true)
+    public boolean isDocumentoCompleto() {
+        boolean sinDocumento = tipoDocumento == null && numeroDocumento == null;
+        return sinDocumento || (tipoDocumento != null && numeroDocumento != null && !numeroDocumento.isBlank());
     }
 
     public SolicitudRegistro(
@@ -53,6 +71,8 @@ public record SolicitudRegistro(
         this(
                 nombres,
                 apellidos,
+                null,
+                null,
                 correo,
                 contrasena,
                 confirmacionContrasena,

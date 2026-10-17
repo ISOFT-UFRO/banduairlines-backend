@@ -55,6 +55,10 @@ public class PerfilUsuarioService {
         if (!Boolean.TRUE.equals(usuario.getActivo()) || actualizados != 1) {
             throw new AuthenticationCredentialsNotFoundException("La cuenta no esta activa");
         }
+        if (solicitud.getTipoDocumento() != null) {
+            usuario.setTipoDocumento(solicitud.getTipoDocumento());
+            usuario.setNumeroDocumento(solicitud.getNumeroDocumento());
+        }
         var respuesta = MapeadorUsuario.aRespuesta(usuario);
         return new RespuestaUsuario(respuesta.idUsuario(), respuesta.nombres(), respuesta.apellidos(),
                 respuesta.correo(), respuesta.rol(), respuesta.rol() == RolUsuario.PASAJERO ? respuesta.nivel() : null);

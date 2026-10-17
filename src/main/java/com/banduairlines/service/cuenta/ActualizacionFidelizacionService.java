@@ -4,6 +4,7 @@ import com.banduairlines.dto.cuenta.ActualizacionFidelizacion;
 import com.banduairlines.exception.*;
 import com.banduairlines.repository.CuentaPuntosRepository;
 import com.banduairlines.security.UsuarioActual;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
@@ -80,6 +81,8 @@ public class ActualizacionFidelizacionService {
             return unicos.values().stream().sorted(Comparator
                     .comparing(FuenteVuelosFidelizacion.TramoRecorrido::fechaLlegada)
                     .thenComparing(FuenteVuelosFidelizacion.TramoRecorrido::idVuelo)).toList();
+        } catch (ServicioExternoException | RecursoNoEncontradoException | AccessDeniedException ex) {
+            throw ex;
         } catch (Exception ex) {
             throw new ServicioExternoException("No fue posible obtener el historial completo de millas", ex)
                     .conCodigo("MILLAS_NO_DISPONIBLES");

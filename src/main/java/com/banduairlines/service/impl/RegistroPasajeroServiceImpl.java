@@ -44,6 +44,8 @@ public class RegistroPasajeroServiceImpl implements RegistroPasajeroService {
         Usuario usuario = Usuario.builder()
                 .nombre(solicitud.nombres().trim())
                 .apellido(solicitud.apellidos().trim())
+                .tipoDocumento(solicitud.tipoDocumento())
+                .numeroDocumento(solicitud.numeroDocumento())
                 .email(correo)
                 .passwordHash(passwordEncoder.encode(solicitud.contrasena()))
                 .rol(RolUsuario.PASAJERO)

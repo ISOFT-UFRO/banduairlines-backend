@@ -1,7 +1,6 @@
 package com.banduairlines.service.impl;
 
 import com.banduairlines.exception.ReglaNegocioException;
-import com.banduairlines.exception.ServicioExternoException;
 import com.banduairlines.exception.ValidacionException;
 import com.banduairlines.model.MovimientoMilla;
 import com.banduairlines.model.enums.TipoMovimiento;
@@ -49,8 +48,11 @@ public class FuenteMovimientosPuntosImpl implements FuenteMovimientosPuntos {
         Map<Long, Long> cantidades = new HashMap<>();
         if (idsBeneficio.isEmpty()) return cantidades;
         for (var movimiento : movimientos.findByTipo(TipoMovimiento.CANJE)) {
-            var datos = leerCanje(movimiento);
-            if (idsBeneficio.contains(datos.idBeneficio())) cantidades.merge(datos.idBeneficio(), 1L, Long::sum);
+            leerCanje(movimiento).ifPresent(datos -> {
+                if (idsBeneficio.contains(datos.idBeneficio())) {
+                    cantidades.merge(datos.idBeneficio(), 1L, Long::sum);
+                }
+            });
         }
         return cantidades;
     }
@@ -58,8 +60,11 @@ public class FuenteMovimientosPuntosImpl implements FuenteMovimientosPuntos {
     @Override
     public Optional<CanjeRegistrado> buscarCanje(Long idUsuario, String claveIdempotencia) {
         return movimientos.findByCuentaFidelizacion_UsuarioIdAndTipo(idUsuario, TipoMovimiento.CANJE)
-                .stream().filter(m -> leerCanje(m).clave().equals(claveIdempotencia))
-                .findFirst().map(this::convertirCanje);
+                .stream()
+                .flatMap(m -> leerCanje(m)
+                        .filter(datos -> datos.clave().equals(claveIdempotencia))
+                        .map(datos -> convertirCanje(m, datos)).stream())
+                .findFirst();
     }
 
     @Override
@@ -95,7 +100,7 @@ public class FuenteMovimientosPuntosImpl implements FuenteMovimientosPuntos {
     }
 
     private MovimientoPuntos convertir(MovimientoMilla m) {
-        var datos = m.getTipo() == TipoMovimiento.CANJE ? leerCanje(m) : null;
+        var datos = m.getTipo() == TipoMovimiento.CANJE ? leerCanje(m).orElse(null) : null;
         return new MovimientoPuntos(m.getId(), m.getTipo(), Math.abs(m.getMillas().longValue()),
                 m.getCreatedAt().toInstant(ZoneOffset.UTC), datos == null ? m.getDescripcion() : "Canje de " + datos.nombre(),
                 m.getReserva() == null ? null : m.getReserva().getCodigoReserva(),
@@ -103,20 +108,24 @@ public class FuenteMovimientosPuntosImpl implements FuenteMovimientosPuntos {
     }
 
     private CanjeRegistrado convertirCanje(MovimientoMilla m) {
-        var datos = leerCanje(m);
+        var datos = leerCanje(m).orElseThrow();
+        return convertirCanje(m, datos);
+    }
+
+    private CanjeRegistrado convertirCanje(MovimientoMilla m, DatosCanje datos) {
         return new CanjeRegistrado(convertir(m), datos.nombre(), datos.saldoAnterior(),
                 Math.addExact(datos.saldoAnterior(), m.getMillas().longValue()));
     }
 
-    private DatosCanje leerCanje(MovimientoMilla m) {
+    private Optional<DatosCanje> leerCanje(MovimientoMilla m) {
         try {
             String[] partes = m.getDescripcion().split("\\|", 5);
             if (partes.length != 5 || !partes[0].equals("C1") || m.getMillas() >= 0)
                 throw new IllegalArgumentException();
-            return new DatosCanje(Long.parseLong(partes[1]), partes[2], Long.parseLong(partes[3]), partes[4]);
+            return Optional.of(new DatosCanje(
+                    Long.parseLong(partes[1]), partes[2], Long.parseLong(partes[3]), partes[4]));
         } catch (RuntimeException ex) {
-            throw new ServicioExternoException("Hay un canje historico sin los datos necesarios para fidelizacion", ex)
-                    .conCodigo("MOVIMIENTOS_NO_DISPONIBLES");
+            return Optional.empty();
         }
     }
 
