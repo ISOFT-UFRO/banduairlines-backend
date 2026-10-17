@@ -179,4 +179,16 @@ public interface PagoRepository extends JpaRepository<Pago, Long>{
             @Param("packId") Long packId,
             @Param("claseCabina") ClaseCabina claseCabina);
 
+        @Query("""
+    select distinct
+        year(coalesce(p.fechaPago, p.createdAt)),
+        month(coalesce(p.fechaPago, p.createdAt))
+    from Pago p
+    where coalesce(p.fechaPago, p.createdAt) < :inicioMesActual
+    order by
+        year(coalesce(p.fechaPago, p.createdAt)) desc,
+        month(coalesce(p.fechaPago, p.createdAt)) desc
+    """)
+    List<Object[]> buscarMesesHistoricosReportes(
+        @Param("inicioMesActual") LocalDateTime inicioMesActual);
 }

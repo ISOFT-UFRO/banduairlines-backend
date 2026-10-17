@@ -11,6 +11,14 @@ import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.time.Clock;
+import java.time.Month;
+import java.time.YearMonth;
+import java.time.format.TextStyle;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
+import java.util.Locale;
+import java.util.Set;
 
 import org.springframework.stereotype.Service;
 
@@ -26,6 +34,7 @@ import com.banduairlines.dto.reportes.RutaUtilizadaResponse;
 import com.banduairlines.dto.reportes.SerieVentasResponse;
 import com.banduairlines.dto.reportes.TarifaCabinaMetricaResponse;
 import com.banduairlines.dto.reportes.TipoPasajeroMetricaResponse;
+import com.banduairlines.dto.reportes.ResumenMensualResponse;
 import com.banduairlines.exception.ReglaNegocioException;
 import com.banduairlines.model.enums.ClaseCabina;
 import com.banduairlines.model.enums.EstadoPago;
@@ -45,19 +54,25 @@ public class ReporteServiceImpl implements ReporteService{
     private final ReservaRepository reservaRepository;
     private final PagoRepository pagoRepository;
     private final VueloRepository vueloRepository;
+    private static final Locale LOCALE_ES = Locale.forLanguageTag("es-CL");
+    private final Clock clock;
 
     public ReporteServiceImpl(
             BoletoRepository boletoRepository,
             BoletoExtraRepository boletoExtraRepository,
             ReservaRepository reservaRepository,
             PagoRepository pagoRepository,
-            VueloRepository vueloRepository) {
-        this.boletoRepository = boletoRepository;
-        this.boletoExtraRepository = boletoExtraRepository;
-        this.reservaRepository = reservaRepository;
-        this.pagoRepository = pagoRepository;
-        this.vueloRepository = vueloRepository;
-    }
+            VueloRepository vueloRepository,
+            Clock clock) {
+                this.boletoRepository = boletoRepository;
+                this.boletoExtraRepository = boletoExtraRepository;
+                this.reservaRepository = reservaRepository;
+                this.pagoRepository = pagoRepository;
+                this.vueloRepository = vueloRepository;
+                this.clock = clock;
+        }
+
+
 
     public EstadisticasComercialesResponse obtener(FiltroEstadisticasRequest request) {
         FiltroEstadisticasRequest filtro = request == null
@@ -404,5 +419,39 @@ public class ReporteServiceImpl implements ReporteService{
     private static final class Acumulado {
         private long ventas;
         private BigDecimal ingresos = BigDecimal.ZERO;
+    }
+    @Override
+    public List<ResumenMensualResponse> listar() {
+        LocalDate hoy = LocalDate.now(clock);
+        LocalDateTime inicioMesActual = hoy.withDayOfMonth(1).atStartOfDay();
+
+        Set<YearMonth> periodos = new LinkedHashSet<>();
+
+        reservaRepository.buscarMesesHistoricosReportes(inicioMesActual)
+                .stream().map(this::toYearMonth).forEach(periodos::add);
+
+        vueloRepository.buscarMesesHistoricosReportes(inicioMesActual)
+                .stream().map(this::toYearMonth).forEach(periodos::add);
+
+        pagoRepository.buscarMesesHistoricosReportes(inicioMesActual)
+                .stream().map(this::toYearMonth).forEach(periodos::add);
+
+        return periodos.stream()
+                .sorted(Comparator.reverseOrder())
+                .map(this::toResponse)
+                .toList();
+    }
+
+    private YearMonth toYearMonth(Object[] row) {
+        return YearMonth.of(((Number) row[0]).intValue(), ((Number) row[1]).intValue());
+    }
+
+    private ResumenMensualResponse toResponse(YearMonth periodo) {
+        String nombreMes = Month.of(periodo.getMonthValue())
+                .getDisplayName(TextStyle.FULL, LOCALE_ES);
+        String nombrePeriodo = Character.toUpperCase(nombreMes.charAt(0))
+                + nombreMes.substring(1) + " " + periodo.getYear();
+        return new ResumenMensualResponse(
+                periodo.toString(), periodo.getYear(), periodo.getMonthValue(), nombrePeriodo);
     }
 }

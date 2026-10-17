@@ -89,4 +89,13 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long>{
             @Param("tipoPasajero") TipoPasajero tipoPasajero,
             @Param("packId") Long packId,
             @Param("claseCabina") ClaseCabina claseCabina);
+
+        @Query("""
+                select distinct year(r.createdAt), month(r.createdAt)
+                from Reserva r
+                where r.createdAt < :inicioMesActual
+                order by year(r.createdAt) desc, month(r.createdAt) desc
+        """)
+        List<Object[]> buscarMesesHistoricosReportes(
+                @Param("inicioMesActual") LocalDateTime inicioMesActual);
 }
