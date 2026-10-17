@@ -51,4 +51,22 @@ public class TrackingController {
     public SeguimientoVueloDTO obtenerPorId(@PathVariable Long vueloId) {
         return trackingService.obtenerPorId(vueloId);
     }
+
+    @GetMapping("/codigo/{codigoVuelo}")
+    @PreAuthorize("hasAnyRole('PASAJERO', 'ADMINISTRADOR')")
+    @Operation(summary = "Consultar el seguimiento de un vuelo por su código",
+            description = "Devuelve el estado actual y el historial del vuelo consultado por código. "
+                    + "La consulta utiliza únicamente los datos sincronizados de Tracking.",
+            security = @SecurityRequirement(name = "trackingBearerAuth"))
+    @ApiResponse(responseCode = "200", description = "Seguimiento encontrado",
+            content = @Content(schema = @Schema(implementation = SeguimientoVueloDTO.class)))
+    @ApiResponse(responseCode = "401", description = "NO_AUTENTICADO",
+            content = @Content(schema = @Schema(implementation = ApiError.class)))
+    @ApiResponse(responseCode = "403", description = "ACCESO_DENEGADO",
+            content = @Content(schema = @Schema(implementation = ApiError.class)))
+    @ApiResponse(responseCode = "404", description = "VUELO_NO_ENCONTRADO: no hay seguimiento para el código",
+            content = @Content(schema = @Schema(implementation = ApiError.class)))
+    public SeguimientoVueloDTO obtenerPorCodigo(@PathVariable String codigoVuelo) {
+        return trackingService.obtenerPorCodigo(codigoVuelo);
+    }
 }

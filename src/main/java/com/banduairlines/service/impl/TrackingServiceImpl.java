@@ -1,5 +1,7 @@
 package com.banduairlines.service.impl;
 
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,5 +31,19 @@ public class TrackingServiceImpl implements TrackingService {
                         .conCodigo(CodigosTracking.VUELO_NO_ENCONTRADO));
 
         return TrackingMapper.aSeguimientoDTO(seguimiento);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SeguimientoVueloDTO obtenerPorCodigo(String codigoVuelo) {
+        List<SeguimientoVuelo> coincidencias = seguimientoRepository.findByCodigoVuelo(codigoVuelo);
+        if (coincidencias.isEmpty()) {
+            throw new RecursoNoEncontradoException(
+                    "No existe seguimiento inicializado para el vuelo con código: " + codigoVuelo)
+                    .conCodigo(CodigosTracking.VUELO_NO_ENCONTRADO);
+        }
+
+        // El mapper carga el historial dentro de esta transacción de lectura.
+        return TrackingMapper.aSeguimientoDTO(coincidencias.getFirst());
     }
 }

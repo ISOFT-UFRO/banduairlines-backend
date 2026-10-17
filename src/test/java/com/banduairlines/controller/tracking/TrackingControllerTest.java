@@ -104,4 +104,62 @@ class TrackingControllerTest {
                 .andExpect(jsonPath("$.code").value("ACCESO_DENEGADO"));
         verifyNoInteractions(trackingService);
     }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"PASAJERO", "ADMINISTRADOR"})
+    void obtenerPorCodigo_conRolPermitido_devuelve200ConHistorial(String rol) throws Exception {
+        LocalDateTime salida = LocalDateTime.of(2026, 10, 16, 10, 0);
+        EventoEstadoDTO evento = new EventoEstadoDTO(12L, EstadoVuelo.EMBARCANDO, EstadoVuelo.EN_VUELO,
+                salida, OrigenEvento.SISTEMA, null);
+        when(trackingService.obtenerPorCodigo("BD0482")).thenReturn(new SeguimientoVueloDTO(
+                7L, 42L, "BD0482", "SCL", "ZCO", salida, salida.plusHours(1),
+                EstadoVuelo.EN_VUELO, 0, List.of(evento)));
+
+        mockMvc.perform(get("/api/v1/tracking/vuelos/codigo/BD0482").with(user("usuario").roles(rol)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.idSeguimiento").value(7))
+                .andExpect(jsonPath("$.vueloId").value(42))
+                .andExpect(jsonPath("$.codigoVuelo").value("BD0482"))
+                .andExpect(jsonPath("$.origenIata").value("SCL"))
+                .andExpect(jsonPath("$.destinoIata").value("ZCO"))
+                .andExpect(jsonPath("$.salidaProgramada").value("2026-10-16T10:00:00"))
+                .andExpect(jsonPath("$.llegadaProgramada").value("2026-10-16T11:00:00"))
+                .andExpect(jsonPath("$.estadoActual").value("EN_VUELO"))
+                .andExpect(jsonPath("$.retrasoMinutos").value(0))
+                .andExpect(jsonPath("$.historial.length()").value(1))
+                .andExpect(jsonPath("$.historial[0].idEvento").value(12))
+                .andExpect(jsonPath("$.historial[0].estadoAnterior").value("EMBARCANDO"))
+                .andExpect(jsonPath("$.historial[0].estadoNuevo").value("EN_VUELO"))
+                .andExpect(jsonPath("$.historial[0].fechaCambio").value("2026-10-16T10:00:00"))
+                .andExpect(jsonPath("$.historial[0].origen").value("SISTEMA"))
+                .andExpect(jsonPath("$.historial[0].actualizadoPor").doesNotExist());
+    }
+
+    @Test
+    void obtenerPorCodigo_sinSeguimiento_devuelve404Centralizado() throws Exception {
+        when(trackingService.obtenerPorCodigo("BD9999")).thenThrow(new RecursoNoEncontradoException("Sin seguimiento")
+                .conCodigo(CodigosTracking.VUELO_NO_ENCONTRADO));
+
+        mockMvc.perform(get("/api/v1/tracking/vuelos/codigo/BD9999").with(user("pasajero").roles("PASAJERO")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("VUELO_NO_ENCONTRADO"))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.path").value("/api/v1/tracking/vuelos/codigo/BD9999"));
+    }
+
+    @Test
+    void obtenerPorCodigo_sinAutenticacion_devuelve401() throws Exception {
+        mockMvc.perform(get("/api/v1/tracking/vuelos/codigo/BD0482"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("NO_AUTENTICADO"));
+        verifyNoInteractions(trackingService);
+    }
+
+    @Test
+    void obtenerPorCodigo_conRolNoPermitido_devuelve403() throws Exception {
+        mockMvc.perform(get("/api/v1/tracking/vuelos/codigo/BD0482").with(user("otro").roles("OTRO")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESO_DENEGADO"));
+        verifyNoInteractions(trackingService);
+    }
 }
