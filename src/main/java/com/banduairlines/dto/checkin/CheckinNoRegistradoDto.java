@@ -1,8 +1,8 @@
 package com.banduairlines.dto.checkin;
 
-public record CheckinNoRegistrado(
+public record CheckinNoRegistradoDto(
         String pnr,
         String apellidos,
-        
+        CheckinPasajeroDto[] pasajeros
 ) {
 }
