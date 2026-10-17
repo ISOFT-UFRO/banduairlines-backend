@@ -148,3 +148,5 @@ El desarrollo del backend está organizado en 9 módulos lógicos. A continuaci�
 
 **Módulo 9: TRACKING (Seguimiento Operativo):** Monitoreo de la operación de la aerolínea. Los pasajeros consultan el estado de sus vuelos en `/api/v1/tracking/**` (requiere autenticación) y los administradores actualizan los estados (*Embarcando*, *En Vuelo*, *Retrasado*) en `/api/v1/admin/tracking/**`. *Modelos base:*
 * **SeguimientoVuelo:** Historial inmutable que registra qué administrador cambió el estado de un vuelo, la marca de tiempo y las observaciones (ej. "Retraso por clima").
+* 
+// .
