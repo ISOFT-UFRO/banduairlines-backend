@@ -9,19 +9,7 @@ import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.List;
 
-import java.util.List;
-
 public interface TarifaVueloRepository extends JpaRepository<TarifaVuelo, Long> {
-
-    @Query("""
-            SELECT t FROM TarifaVuelo t
-            JOIN FETCH t.vuelo v
-            JOIN FETCH t.pack p
-            WHERE v.id = :vueloId
-              AND p.activo = true
-            ORDER BY t.precio ASC
-            """)
-    List<TarifaVuelo> buscarTarifasActivasPorVuelo(@Param("vueloId") Long vueloId);
 
     interface PrecioMinimoVuelo {
         Long getVueloId();
