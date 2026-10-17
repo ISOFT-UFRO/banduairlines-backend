@@ -15,9 +15,11 @@ import com.banduairlines.dto.checkin.PeticionReservaResponse;
 import com.banduairlines.model.Boleto;
 import com.banduairlines.model.Pasajero;
 import com.banduairlines.model.Reserva;
+import com.banduairlines.model.Usuario;
 import com.banduairlines.model.Vuelo;
 import com.banduairlines.repository.BoletoRepository;
 import com.banduairlines.repository.ReservaRepository;
+import com.banduairlines.repository.UsuarioRepository;
 
 @Service 
 public class ReservasService {
@@ -26,27 +28,52 @@ public class ReservasService {
     
     private ReservaRepository reservaRepository;
     private BoletoRepository boletoRepository;
+    private UsuarioRepository usuarioRepository;
 
-    public ReservasService(ReservaRepository reservaRepository, BoletoRepository boletoRepository) {
+    public ReservasService(ReservaRepository reservaRepository, BoletoRepository boletoRepository, UsuarioRepository usuarioRepository) {
         this.reservaRepository = reservaRepository;
         this.boletoRepository = boletoRepository;
+        this.usuarioRepository = usuarioRepository;
     }
 
+    // USUARIO REGISTRADO
+    @Transactional(readOnly = true)
+    public Optional<List<PeticionReservaResponse>> getReservasUsuarioRegistrado(Long id){
+
+        Optional<Usuario> usuarioOpt = usuarioRepository.findById(id);
+        if (usuarioOpt.isEmpty()){
+            return Optional.empty(); //Error 404
+        }
+
+        List<PeticionReservaResponse> reservas = reservaRepository.findByUsuarioId(id).stream()
+            .map(this::toResponse)
+            .flatMap(Optional::stream)
+            .sorted(Comparator.comparing(PeticionReservaResponse::fechaSalida)
+                .thenComparing(PeticionReservaResponse::horaSalida))
+            .toList();
+
+        return Optional.of(reservas);
+    }
+
+
+    // USUARIO NO REGISTRADO
     @Transactional(readOnly = true)
     public Optional<PeticionReservaResponse> getReservaUsuarioNoRegistrado(PeticionReservaQuery dto){
+        
+        return reservaRepository
+            .findByCodigoReservaAndEmailContacto(dto.codigoPnr(), dto.correoElectronico())
+            .flatMap(this::toResponse); //Puede devolver Optional<null>
+    }
 
-        Optional<Reserva> reservaOpt = reservaRepository.findByCodigoReservaAndEmailContacto(dto.codigoPnr(),dto.correoElectronico());
-
-        //
-        Reserva reserva;
-        if (reservaOpt.isEmpty()){
-            return Optional.empty(); //Error 404
-        } else {
-            reserva = reservaOpt.get();
+    // Devuelve vacio si la reserva no tiene boletos (sin vuelos no hay fecha ni destino)
+    private Optional<PeticionReservaResponse> toResponse(Reserva reserva) {
+        List<Boleto> boletos = boletoRepository.findByReserva(reserva);
+        if (boletos.isEmpty()) {
+            return Optional.empty();
         }
-        
-        List<Vuelo> itinerario = getVuelosOrdenados(reserva);
-        
+
+        List<Vuelo> itinerario = getVuelosOrdenados(boletos);
+
         Vuelo primerVuelo = itinerario.get(0);
         Vuelo ultimoVuelo = itinerario.get(itinerario.size() - 1);
         String paisDestino = ultimoVuelo.getRuta().getDestino().getPais();
@@ -60,7 +87,7 @@ public class ReservasService {
             apellido = reserva.getUsuario().getApellido();
         } else {
             // Reserva de invitado: no tiene usuario, se usa el pasajero del primer boleto (Compañero)
-            Pasajero pasajero = boletoRepository.findByReserva(reserva).get(0).getPasajeroId();
+            Pasajero pasajero = boletos.get(0).getPasajeroId();
             nombre = pasajero.getNombre();
             apellido = pasajero.getApellido();
         }
@@ -79,9 +106,7 @@ public class ReservasService {
         );
     }
 
-    private List<Vuelo> getVuelosOrdenados(Reserva reserva) {
-        List<Boleto> boletos = boletoRepository.findByReserva(reserva);
-
+    private List<Vuelo> getVuelosOrdenados(List<Boleto> boletos) {
         return boletos.stream()
             .map(Boleto::getVueloId)
             .collect(Collectors.toMap(

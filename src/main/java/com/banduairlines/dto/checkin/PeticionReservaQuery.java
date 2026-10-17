@@ -1,6 +1,7 @@
 package com.banduairlines.dto.checkin;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public record PeticionReservaQuery (
-    String correoElectronico,
-    String codigoPnr
+    @JsonProperty("correo_electronico") String correoElectronico,
+    @JsonProperty("codigo_pnr") String codigoPnr
 ){}
