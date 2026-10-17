@@ -104,6 +104,7 @@ class FidelizacionServiceImplTest {
         assertEquals(1, respuesta.movimientosRecientes().size());
         assertEquals("Acumulación por vuelo 4", respuesta.movimientosRecientes().get(0).descripcion());
         assertEquals("ABC123", respuesta.movimientosRecientes().get(0).codigoPNR());
+        assertEquals(300, respuesta.movimientosRecientes().get(0).cantidadPuntos());
     }
 
     @Test
@@ -157,7 +158,10 @@ class FidelizacionServiceImplTest {
         assertEquals(TipoRegistroPuntos.CANJE, canje.tipo());
         assertEquals(3L, canje.idBeneficio());
         assertEquals("Canje de Sala VIP", canje.descripcion());
-        assertNull(respuesta.contenido().get(1).idBeneficio());
+        assertEquals(-200, canje.cantidadPuntos());
+        RespuestaMovimientoPuntos acumulacion = respuesta.contenido().get(1);
+        assertNull(acumulacion.idBeneficio());
+        assertEquals(300, acumulacion.cantidadPuntos());
     }
 
     @Test

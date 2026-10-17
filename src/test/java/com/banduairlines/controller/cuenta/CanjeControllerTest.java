@@ -1,11 +1,13 @@
 package com.banduairlines.controller.cuenta;
 
 import com.banduairlines.dto.cuenta.RespuestaCanje;
+import com.banduairlines.dto.cuenta.RespuestaMovimientoPuntos;
 import com.banduairlines.exception.CodigosError;
 import com.banduairlines.exception.ConflictoException;
 import com.banduairlines.exception.GlobalExceptionHandler;
 import com.banduairlines.exception.ReglaNegocioException;
 import com.banduairlines.exception.ValidacionException;
+import com.banduairlines.persistence.cuenta.TipoRegistroPuntos;
 import com.banduairlines.service.cuenta.CanjeService;
 import com.banduairlines.service.cuenta.CanjeService.ResultadoCanje;
 import com.banduairlines.service.cuenta.CodigosFidelizacion;
@@ -49,7 +51,7 @@ class CanjeControllerTest {
     @Test
     void canjeNuevo_responde201() throws Exception {
         when(canjeService.canjearActual(3L, CLAVE)).thenReturn(
-                new ResultadoCanje(new RespuestaCanje(50L, 3L, "Sala VIP", 200, 800, null), true));
+                new ResultadoCanje(respuestaCanje(), true));
 
         mockMvc.perform(post(RUTA)
                         .header(CanjeController.ENCABEZADO_CLAVE, CLAVE)
@@ -57,21 +59,25 @@ class CanjeControllerTest {
                         .content("{\"idBeneficio\":3}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.idCanje").value(50))
-                .andExpect(jsonPath("$.puntosCanjeados").value(200))
-                .andExpect(jsonPath("$.saldoPuntos").value(800));
+                .andExpect(jsonPath("$.saldoAnterior").value(1000))
+                .andExpect(jsonPath("$.puntosDescontados").value(200))
+                .andExpect(jsonPath("$.saldoActual").value(800))
+                .andExpect(jsonPath("$.movimiento.tipo").value("CANJE"))
+                .andExpect(jsonPath("$.movimiento.cantidadPuntos").value(-200));
     }
 
     @Test
     void claveRepetida_responde200ConElCanjeOriginal() throws Exception {
         when(canjeService.canjearActual(3L, CLAVE)).thenReturn(
-                new ResultadoCanje(new RespuestaCanje(50L, 3L, "Sala VIP", 200, 800, null), false));
+                new ResultadoCanje(respuestaCanje(), false));
 
         mockMvc.perform(post(RUTA)
                         .header(CanjeController.ENCABEZADO_CLAVE, CLAVE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"idBeneficio\":3}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.idCanje").value(50));
+                .andExpect(jsonPath("$.idCanje").value(50))
+                .andExpect(jsonPath("$.saldoActual").value(800));
     }
 
     @Test
@@ -123,5 +129,10 @@ class CanjeControllerTest {
                         .content("{\"idBeneficio\":3}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(CodigosError.VALIDACION));
+    }
+
+    private static RespuestaCanje respuestaCanje() {
+        return new RespuestaCanje(50L, 1000, 200, 800, new RespuestaMovimientoPuntos(
+                50L, TipoRegistroPuntos.CANJE, -200, null, "Canje de Sala VIP", null, 3L));
     }
 }

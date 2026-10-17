@@ -111,21 +111,31 @@ class FlujoCanjeIntegracionTest {
         ResultadoCanje resultado = comoPasajero(() -> canjeService.canjearActual(idBeneficio, "clave-integracion-1"));
 
         assertTrue(resultado.creado());
-        assertEquals(SALDO_INICIAL - COSTO_BENEFICIO, resultado.canje().saldoPuntos());
+        assertEquals(SALDO_INICIAL, resultado.canje().saldoAnterior());
+        assertEquals(COSTO_BENEFICIO, resultado.canje().puntosDescontados());
+        assertEquals(SALDO_INICIAL - COSTO_BENEFICIO, resultado.canje().saldoActual());
+        assertEquals(-COSTO_BENEFICIO, resultado.canje().movimiento().cantidadPuntos());
         assertEquals(SALDO_INICIAL - COSTO_BENEFICIO, registros.calcularSaldo(idUsuario));
         assertEquals(Nivel.BASICO, nivelGuardado());
     }
 
     @Test
-    void claveRepetida_noDescuentaDosVeces() {
+    void claveRepetida_noDescuentaDosVecesYDevuelveLaRespuestaOriginal() {
         ResultadoCanje primero = comoPasajero(() -> canjeService.canjearActual(idBeneficio, "clave-integracion-2"));
+        // Entre el canje y el reintento el saldo cambia por una nueva acumulación.
+        registros.save(new RegistroPuntos(idUsuario, TipoRegistroPuntos.ACUMULACION, 500,
+                reloj.instant(), "PRUEBA:" + UUID.randomUUID(), "ABC123"));
         ResultadoCanje segundo = comoPasajero(() -> canjeService.canjearActual(idBeneficio, "clave-integracion-2"));
 
         assertTrue(primero.creado());
         assertFalse(segundo.creado());
         assertEquals(primero.canje().idCanje(), segundo.canje().idCanje());
+        assertEquals(primero.canje().saldoAnterior(), segundo.canje().saldoAnterior());
+        assertEquals(primero.canje().puntosDescontados(), segundo.canje().puntosDescontados());
+        assertEquals(primero.canje().saldoActual(), segundo.canje().saldoActual());
+        assertEquals(primero.canje().movimiento().cantidadPuntos(), segundo.canje().movimiento().cantidadPuntos());
         assertEquals(1, cantidadDeCanjes());
-        assertEquals(SALDO_INICIAL - COSTO_BENEFICIO, registros.calcularSaldo(idUsuario));
+        assertEquals(SALDO_INICIAL - COSTO_BENEFICIO + 500, registros.calcularSaldo(idUsuario));
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.banduairlines.service;
 
 import com.banduairlines.dto.cuenta.ActualizacionFidelizacion;
+import com.banduairlines.dto.cuenta.RespuestaMovimientoPuntos;
 import com.banduairlines.exception.ConflictoException;
 import com.banduairlines.exception.RecursoNoEncontradoException;
 import com.banduairlines.exception.ReglaNegocioException;
@@ -23,6 +24,7 @@ import com.banduairlines.service.cuenta.CanjeService.ResultadoCanje;
 import com.banduairlines.service.cuenta.CodigosFidelizacion;
 import com.banduairlines.service.cuenta.EvaluadorBeneficio;
 import com.banduairlines.service.impl.CanjeServiceImpl;
+import com.banduairlines.service.impl.MapeadorFidelizacion;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -75,8 +77,10 @@ class CanjeServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        EvaluadorBeneficio evaluador = new EvaluadorBeneficio();
         servicio = new CanjeServiceImpl(cuentas, beneficios, historial, registros, actualizacion,
-                new EvaluadorBeneficio(), usuarioActual, Clock.fixed(AHORA, ZoneOffset.UTC));
+                evaluador, usuarioActual, new MapeadorFidelizacion(beneficios, evaluador),
+                Clock.fixed(AHORA, ZoneOffset.UTC));
     }
 
     @Test
@@ -95,9 +99,16 @@ class CanjeServiceImplTest {
 
         assertTrue(resultado.creado());
         assertEquals(50L, resultado.canje().idCanje());
-        assertEquals(200, resultado.canje().puntosCanjeados());
-        assertEquals(800, resultado.canje().saldoPuntos());
-        assertEquals("Sala VIP", resultado.canje().nombreBeneficio());
+        assertEquals(1000, resultado.canje().saldoAnterior());
+        assertEquals(200, resultado.canje().puntosDescontados());
+        assertEquals(800, resultado.canje().saldoActual());
+        RespuestaMovimientoPuntos movimiento = resultado.canje().movimiento();
+        assertEquals(50L, movimiento.idMovimiento());
+        assertEquals(TipoRegistroPuntos.CANJE, movimiento.tipo());
+        assertEquals(-200, movimiento.cantidadPuntos());
+        assertEquals(ID_BENEFICIO, movimiento.idBeneficio());
+        assertEquals("Canje de Sala VIP", movimiento.descripcion());
+        assertEquals(AHORA, movimiento.fecha());
 
         ArgumentCaptor<RegistroPuntos> captor = ArgumentCaptor.forClass(RegistroPuntos.class);
         verify(registros).save(captor.capture());
@@ -186,13 +197,18 @@ class CanjeServiceImplTest {
         when(historial.findFirstByIdUsuarioAndTipoAndReferenciaStartingWith(ID_USUARIO, TipoRegistroPuntos.CANJE, PREFIJO))
                 .thenReturn(Optional.of(anterior));
         when(beneficios.findById(ID_BENEFICIO)).thenReturn(Optional.of(beneficio(Nivel.BASICO, 200, true)));
-        when(registros.calcularSaldo(ID_USUARIO)).thenReturn(800L);
+        // Saldo justo después del canje original, aunque el saldo de hoy sea otro.
+        when(historial.calcularSaldoHasta(ID_USUARIO, 50L)).thenReturn(800L);
 
         ResultadoCanje resultado = servicio.canjearActual(ID_BENEFICIO, CLAVE);
 
         assertFalse(resultado.creado());
         assertEquals(50L, resultado.canje().idCanje());
-        assertEquals(800, resultado.canje().saldoPuntos());
+        assertEquals(1000, resultado.canje().saldoAnterior());
+        assertEquals(200, resultado.canje().puntosDescontados());
+        assertEquals(800, resultado.canje().saldoActual());
+        assertEquals(-200, resultado.canje().movimiento().cantidadPuntos());
+        assertEquals("Canje de Sala VIP", resultado.canje().movimiento().descripcion());
         verify(registros, never()).save(any());
         verifyNoInteractions(actualizacion);
     }

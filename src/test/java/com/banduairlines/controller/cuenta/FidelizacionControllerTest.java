@@ -75,7 +75,7 @@ class FidelizacionControllerTest {
     @Test
     void movimientos_pasaLaPaginaYElTamano() throws Exception {
         RespuestaMovimientoPuntos movimiento = new RespuestaMovimientoPuntos(
-                51L, TipoRegistroPuntos.CANJE, 200, null, "Canje de Sala VIP", null, 3L);
+                51L, TipoRegistroPuntos.CANJE, -200, null, "Canje de Sala VIP", null, 3L);
         when(fidelizacionService.listarMovimientosActual(1, 5))
                 .thenReturn(new RespuestaPaginada<>(List.of(movimiento), 1, 5, 6, 2));
 
@@ -85,6 +85,7 @@ class FidelizacionControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.contenido[0].idMovimiento").value(51))
                 .andExpect(jsonPath("$.contenido[0].tipo").value("CANJE"))
+                .andExpect(jsonPath("$.contenido[0].cantidadPuntos").value(-200))
                 .andExpect(jsonPath("$.totalElementos").value(6))
                 .andExpect(jsonPath("$.totalPaginas").value(2));
 
