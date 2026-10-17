@@ -23,6 +23,7 @@ import java.util.Set;
 import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 
 import com.banduairlines.dto.reportes.AgrupacionTemporal;
 import com.banduairlines.dto.reportes.EstadisticasComercialesResponse;
@@ -35,6 +36,7 @@ import com.banduairlines.dto.reportes.SerieVentasResponse;
 import com.banduairlines.dto.reportes.TarifaCabinaMetricaResponse;
 import com.banduairlines.dto.reportes.TipoPasajeroMetricaResponse;
 import com.banduairlines.dto.reportes.ResumenMensualResponse;
+import com.banduairlines.dto.reportes.ReporteResponse;
 import com.banduairlines.exception.ReglaNegocioException;
 import com.banduairlines.model.enums.ClaseCabina;
 import com.banduairlines.model.enums.EstadoPago;
@@ -126,12 +128,12 @@ public class ReporteServiceImpl implements ReporteService{
                 filtro.tipoPasajero(), filtro.packTarifarioId(),
                 filtro.claseCabina()));
 
-        long capacidad = valor(vueloRepository.contarCapacidadAsientosReportes(
+        /*long capacidad = valor(vueloRepository.contarCapacidadAsientosReportes(
                 inicio, finExclusivo,
                 filtro.rutaId(), filtro.origenIata(), filtro.destinoIata(),
                 filtro.estadoReserva(), filtro.estadoPago(),
                 filtro.tipoPasajero(), filtro.packTarifarioId(),
-                filtro.claseCabina()));
+                filtro.claseCabina()));*/
 
         List<RutaUtilizadaResponse> rutas = mapearRutas(
                 boletoRepository.rankingRutasReportes(
@@ -180,6 +182,7 @@ public class ReporteServiceImpl implements ReporteService{
                         filtro.tipoPasajero(), filtro.packTarifarioId(),
                         filtro.claseCabina()));
 
+        Long capacidad = (long) 0.0;
         return new EstadisticasComercialesResponse(
                 totalVentas,
                 ingresosTotales,
@@ -430,8 +433,8 @@ public class ReporteServiceImpl implements ReporteService{
         reservaRepository.buscarMesesHistoricosReportes(inicioMesActual)
                 .stream().map(this::toYearMonth).forEach(periodos::add);
 
-        vueloRepository.buscarMesesHistoricosReportes(inicioMesActual)
-                .stream().map(this::toYearMonth).forEach(periodos::add);
+        /*vueloRepository.buscarMesesHistoricosReportes(inicioMesActual)
+                .stream().map(this::toYearMonth).forEach(periodos::add);*/
 
         pagoRepository.buscarMesesHistoricosReportes(inicioMesActual)
                 .stream().map(this::toYearMonth).forEach(periodos::add);
@@ -453,5 +456,83 @@ public class ReporteServiceImpl implements ReporteService{
                 + nombreMes.substring(1) + " " + periodo.getYear();
         return new ResumenMensualResponse(
                 periodo.toString(), periodo.getYear(), periodo.getMonthValue(), nombrePeriodo);
+    }
+
+    @Override
+    @Transactional(
+            readOnly = true,
+            isolation = Isolation.REPEATABLE_READ
+    )
+    public ReporteResponse obtenerPorFecha(LocalDate fecha) {
+
+        LocalDateTime desde = fecha.atStartOfDay();
+        LocalDateTime hasta = fecha.plusDays(1).atStartOfDay();
+
+        long ventas = reservaRepository.contarReservasReporte(
+                EstadoReserva.CONFIRMADA,
+                desde,
+                hasta
+        );
+
+        long pendientes = reservaRepository.contarReservasReporte(
+                EstadoReserva.PENDIENTE_PAGO,
+                desde,
+                hasta
+        );
+
+        BigDecimal ingresos = pagoRepository.sumarIngresosReporte(
+                EstadoPago.PAGADO,
+                "CLP",
+                desde,
+                hasta
+        );
+
+        if (ingresos == null) {
+            ingresos = BigDecimal.ZERO;
+        }
+
+        long asientos = boletoRepository
+                .contarAsientosAsignadosReporte(
+                        EstadoReserva.CONFIRMADA,
+                        desde,
+                        hasta
+                );
+
+        long adultos = contarPasajeros(
+                TipoPasajero.ADULTO, desde, hasta
+        );
+
+        long ninios = contarPasajeros(
+                TipoPasajero.NINO, desde, hasta
+        );
+
+        long bebes = contarPasajeros(
+                TipoPasajero.BEBE, desde, hasta
+        );
+
+        return new ReporteResponse(
+                fecha,
+                "CLP",
+                ventas,
+                ingresos,
+                pendientes,
+                asientos,
+                adultos,
+                ninios,
+                bebes
+        );
+    }
+
+    private long contarPasajeros(
+            TipoPasajero tipo,
+            LocalDateTime desde,
+            LocalDateTime hasta
+    ) {
+        return boletoRepository.contarPasajerosReporte(
+                EstadoReserva.CONFIRMADA,
+                tipo,
+                desde,
+                hasta
+        );
     }
 }

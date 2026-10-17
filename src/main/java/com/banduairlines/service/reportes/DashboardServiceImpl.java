@@ -64,7 +64,9 @@ public class DashboardServiceImpl implements DashboardService {
 
         List<DashboardResponse.IngresoPeriodo> ingresosPorPeriodo = agruparIngresos(
                 desde, hasta, tipoAgrupacion,
-                pagoRepository.obtenerIngresosDiarios(inicio, finExclusivo), ingresosTotales);
+                /*pagoRepository.obtenerIngresosDiarios(inicio, finExclusivo)*/
+                crearIngresosDiariosMock(),
+                 ingresosTotales);
 
         List<DashboardResponse.IngresoPorRuta> ingresosPorRuta = reservaRepository
                 .resumirIngresosPorRuta(inicio, finExclusivo).stream()
@@ -73,10 +75,12 @@ public class DashboardServiceImpl implements DashboardService {
         List<DashboardResponse.VentaExtra> ventasExtras = boletoRepository
                 .resumirVentasExtras(inicio, finExclusivo).stream()
                 .map(this::mapearVentaExtra).toList();
-
-        List<DashboardResponse.OcupacionVuelo> vuelos = vueloRepository
+        //limitado hasta implementacion de VueloRepository
+        /*List<DashboardResponse.OcupacionVuelo> vuelos = vueloRepository
                 .resumirOcupacion(inicio, finExclusivo).stream()
-                .map(this::mapearOcupacion).toList();
+                .map(this::mapearOcupacion).toList();*/
+
+        List<DashboardResponse.OcupacionVuelo> vuelos = crearOcupacionMock();
 
         long asientosOcupados = vuelos.stream()
                 .mapToLong(DashboardResponse.OcupacionVuelo::asientosOcupados).sum();
@@ -183,4 +187,65 @@ public class DashboardServiceImpl implements DashboardService {
         private BigDecimal ingresos = BigDecimal.ZERO;
         private long pagos;
     }
+
+    // MOCK TEMPORAL
+    private List<DashboardResponse.OcupacionVuelo> crearOcupacionMock() {
+    return List.of(
+            new DashboardResponse.OcupacionVuelo(
+                    "BA101",
+                    "SCL",
+                    "ZCO",
+                    LocalDateTime.of(2026, 10, 15, 8, 30),
+                    120L,
+                    180L,
+                    porcentaje(120L, 180L)
+            ),
+            new DashboardResponse.OcupacionVuelo(
+                    "BA202",
+                    "SCL",
+                    "CCP",
+                    LocalDateTime.of(2026, 10, 15, 12, 15),
+                    150L,
+                    180L,
+                    porcentaje(150L, 180L)
+            ),
+            new DashboardResponse.OcupacionVuelo(
+                    "BA303",
+                    "ZCO",
+                    "SCL",
+                    LocalDateTime.of(2026, 10, 15, 18, 45),
+                    90L,
+                    150L,
+                    porcentaje(90L, 150L)
+            )
+    );
+}   
+
+private List<IngresoDiarioProjection> crearIngresosDiariosMock() {
+
+    IngresoDiarioProjection fila1 = new IngresoDiarioProjection() {
+
+        @Override
+        public LocalDate getFecha() {
+            return LocalDate.of(2026, 10, 1);
+        }
+
+        @Override
+        public String getMoneda() {
+            return "CLP";
+        }
+
+        @Override
+        public BigDecimal getIngresos() {
+            return new BigDecimal("500000");
+        }
+
+        @Override
+        public long getPagos() {
+            return 5L;
+        }
+    };
+
+    return List.of(fila1);
+}
 }

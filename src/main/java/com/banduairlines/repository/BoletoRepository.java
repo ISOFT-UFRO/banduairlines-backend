@@ -283,3 +283,4 @@ public interface BoletoRepository extends JpaRepository<Boleto, Long>{
             @Param("packId") Long packId,
             @Param("claseCabina") ClaseCabina claseCabina);
 }
+

@@ -1,16 +1,20 @@
 package com.banduairlines.controller.reportes;
 
+import java.time.LocalDate;
 import java.util.List;
 
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.banduairlines.dto.reportes.EstadisticasComercialesResponse;
 import com.banduairlines.dto.reportes.FiltroEstadisticasRequest;
+import com.banduairlines.dto.reportes.ReporteResponse;
 import com.banduairlines.dto.reportes.ResumenMensualResponse;
 import com.banduairlines.service.reportes.ReporteService;
 
@@ -26,7 +30,7 @@ import jakarta.validation.Valid;
 public class ReporteController {
     private final ReporteService reporteService;
 
-        public ReporteController(ReporteService reporteService) {
+    public ReporteController(ReporteService reporteService) {
         this.reporteService = reporteService;
     }
 
@@ -37,14 +41,28 @@ public class ReporteController {
             description = "Permite filtrar ventas, ingresos, ocupación, rutas, estados, pasajeros y tarifas.")
     public ResponseEntity<EstadisticasComercialesResponse> obtener(
             @Valid @ModelAttribute FiltroEstadisticasRequest filtro) {
-                return ResponseEntity.ok(reporteService.obtener(filtro));
-        }
+        return ResponseEntity.ok(reporteService.obtener(filtro));
+    }
 
     @GetMapping("/historial")
     @PreAuthorize("hasRole('ADMINISTRADOR')")
-    @Operation(summary = "Listar resúmenes mensuales históricos",
+    @Operation(
+            summary = "Listar resúmenes mensuales históricos",
             description = "Entrega todos los periodos históricos disponibles para que el usuario seleccione uno y acceda posteriormente al detalle del RF4.")
     public ResponseEntity<List<ResumenMensualResponse>> listar() {
         return ResponseEntity.ok(reporteService.listar());
-        }
+    }
+
+    @GetMapping("/detalle")
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @Operation(
+            summary = "Obtener detalle de reporte por fecha",
+            description = "Consulta el detalle de reportes para una fecha específica.")
+    public ResponseEntity<ReporteResponse> obtenerDetalle(
+            @RequestParam("fecha")
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate fecha) {
+        return ResponseEntity.ok(reporteService.obtenerPorFecha(fecha));
+    }
 }
+

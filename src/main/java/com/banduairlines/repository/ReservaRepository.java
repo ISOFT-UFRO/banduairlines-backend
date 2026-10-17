@@ -12,7 +12,6 @@ import com.banduairlines.model.enums.ClaseCabina;
 import com.banduairlines.model.enums.EstadoPago;
 import com.banduairlines.model.enums.EstadoReserva;
 import com.banduairlines.model.enums.TipoPasajero;
-import com.banduairlines.dto.reportes.ReservaEstadoProjection;
 import com.banduairlines.dto.reportes.IngresoRutaProjection;
 
 public interface ReservaRepository extends JpaRepository<Reserva, Long>{
@@ -20,7 +19,7 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long>{
             "where r.createdAt >= :desde and r.createdAt < :hasta group by r.estado")
     List<ReservaEstadoProjection> contarPorEstadoReporte(@Param("desde") LocalDateTime desde,
             @Param("hasta") LocalDateTime hasta);
-
+            
     @Query("select count(r.id) from Reserva r where r.estado = :estado " +
             "and r.createdAt >= :desde and r.createdAt < :hasta")
     long contarReservasReporte(@Param("estado") EstadoReserva estado,
@@ -98,4 +97,13 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long>{
         """)
         List<Object[]> buscarMesesHistoricosReportes(
                 @Param("inicioMesActual") LocalDateTime inicioMesActual);
+
+        
+
+    interface ReservaEstadoProjection {
+
+        EstadoReserva getEstado();
+
+        Long getCantidad();
+    }
 }
