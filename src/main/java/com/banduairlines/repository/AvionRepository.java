@@ -10,5 +10,6 @@ import java.util.Optional;
 public interface AvionRepository extends JpaRepository<Avion, Long> {
 
     // Opcional pero muy útil para buscar aeronaves por su matrícula única
-    Optional<Avion> findByMatricula(String matricula);
-}
+        Optional<Avion> findByMatricula(String matricula);
+        boolean existsByMatricula(String matricula);
+    }
