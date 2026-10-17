@@ -1,6 +1,6 @@
 package com.banduairlines.service.impl;
 
-import org.springframework.stereotype.Service;
+/*import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.banduairlines.dto.reserva.ReservaResponse;
@@ -48,3 +48,4 @@ public class ReservaConsultaServiceImpl implements ReservaConsultaService {
                 boletoRepository.findByReserva_IdOrderByOrdenTramoAscIdAsc(reserva.getId()));
     }
 }
+*/
