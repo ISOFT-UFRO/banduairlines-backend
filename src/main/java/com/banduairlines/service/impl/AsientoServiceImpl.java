@@ -1,5 +1,7 @@
 package com.banduairlines.service.impl;
 
+import com.banduairlines.exception.RecursoNoEncontradoException;
+
 import com.banduairlines.model.Asiento;
 import com.banduairlines.model.Avion;
 import com.banduairlines.model.enums.ClaseCabina;
@@ -47,7 +49,7 @@ public class AsientoServiceImpl implements AsientoService {
             Boolean esPreferente) {
 
         Avion avion = avionRepository.findById(aeronaveId)
-                .orElseThrow(() -> new RuntimeException("Aeronave no encontrada"));
+        .orElseThrow(() -> new RecursoNoEncontradoException("Aeronave no encontrada: " + aeronaveId));
 
         Asiento asiento = Asiento.builder()
                 .aeronave(avion)

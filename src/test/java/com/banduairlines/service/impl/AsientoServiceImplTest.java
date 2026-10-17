@@ -1,5 +1,7 @@
 package com.banduairlines.service.impl;
 
+import com.banduairlines.exception.RecursoNoEncontradoException;
+
 import com.banduairlines.model.Asiento;
 import com.banduairlines.model.Avion;
 import com.banduairlines.model.enums.ClaseCabina;
@@ -117,8 +119,8 @@ class AsientoServiceImplTest {
 
         assertThatThrownBy(() -> asientoService.crearAsiento(
                 99L, 1, "A", ClaseCabina.PREMIUM_ECONOMY, false))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Aeronave no encontrada");
+                .isInstanceOf(RecursoNoEncontradoException.class)
+                .hasMessage("Aeronave no encontrada: 99");
 
         verify(asientoRepository, never()).save(any());
     }
