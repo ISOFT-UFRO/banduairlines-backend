@@ -1,6 +1,6 @@
 package com.banduairlines.service.impl;
 
-/*import org.slf4j.Logger;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +15,7 @@ import com.banduairlines.repository.ReservaRepository;
 import com.banduairlines.service.reserva.CalculadoraTotalReserva;
 import com.banduairlines.service.reserva.ReservaAcceso;
 import com.banduairlines.service.reserva.ReservaResultadoPagoService;
+import com.banduairlines.service.reserva.TransaccionesPagoProvisional;
 
  //Endpoint 13, se dejo los import de los codigo de los endpoint hecho por otro para que el merge no halla problema
 @Service
@@ -25,9 +26,12 @@ public class ReservaResultadoPagoServiceImpl implements ReservaResultadoPagoServ
     static final String MONTO_NO_COINCIDE = "MONTO_NO_COINCIDE";
 
     private final ReservaRepository reservaRepository;
+    private final TransaccionesPagoProvisional transacciones;
 
-    public ReservaResultadoPagoServiceImpl(ReservaRepository reservaRepository) {
+    public ReservaResultadoPagoServiceImpl(ReservaRepository reservaRepository,
+                                           TransaccionesPagoProvisional transacciones) {
         this.reservaRepository = reservaRepository;
+        this.transacciones = transacciones;
     }
 
     @Override
@@ -43,7 +47,7 @@ public class ReservaResultadoPagoServiceImpl implements ReservaResultadoPagoServ
 
     private ResultadoPagoResponse registrarPagado(Reserva reserva, ResultadoPagoRequest request) {
         if (reserva.getEstado() == EstadoReserva.CONFIRMADA) {
-            if (request.transaccionId().equals(reserva.getTransaccionPagoId())) {
+            if (transacciones.confirmadaCon(reserva.getId(), request.transaccionId())) {
                 return respuesta(reserva); // reintento de PAGOS: idempotente
             }
             log.error("Pago {} (transacción {}) recibido para la reserva {}, que ya estaba CONFIRMADA con otra transacción; posible doble cobro",
@@ -65,8 +69,8 @@ public class ReservaResultadoPagoServiceImpl implements ReservaResultadoPagoServ
                     .conCodigo(MONTO_NO_COINCIDE);
         }
         reserva.setEstado(EstadoReserva.CONFIRMADA);
-        reserva.setTransaccionPagoId(request.transaccionId());
         reservaRepository.save(reserva);
+        transacciones.registrar(reserva.getId(), request.transaccionId());
         return respuesta(reserva);
     }
 
@@ -79,4 +83,4 @@ public class ReservaResultadoPagoServiceImpl implements ReservaResultadoPagoServ
     private static ResultadoPagoResponse respuesta(Reserva reserva) {
         return new ResultadoPagoResponse(reserva.getId(), reserva.getEstado());
     }
-}*/
+}

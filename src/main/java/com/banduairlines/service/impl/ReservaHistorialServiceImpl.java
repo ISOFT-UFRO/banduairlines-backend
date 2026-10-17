@@ -1,5 +1,5 @@
 package com.banduairlines.service.impl;
-/* 
+
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -90,4 +90,4 @@ public class ReservaHistorialServiceImpl implements ReservaHistorialService {
                 r.cantidadPasajeros(), r.itinerario(), r.total());
     }
 }
-*/
+

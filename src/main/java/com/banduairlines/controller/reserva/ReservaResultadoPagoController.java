@@ -16,7 +16,7 @@ import com.banduairlines.service.reserva.ReservaResultadoPagoService;
 
 // endpoint 13. Acceso: servicio interno (PAGOS) con la clave compartida en X-Service-Key. senecesita persimo para conf9ogurar 
 //Application.properties y colocar app.internal.service-key=${SERVICE_KEY:} para que este endpoint funcione 
-//tambien, la info de transaccionPagoId se agrega automaticamente con ddl-auto=update
+//La transacción con que se confirmó cada reserva se recuerda en TransaccionesPagoProvisional (sin columna nueva).
 @RestController
 @RequestMapping("/api/v1/internas/reservas/{reservaId}")
 public class ReservaResultadoPagoController {
