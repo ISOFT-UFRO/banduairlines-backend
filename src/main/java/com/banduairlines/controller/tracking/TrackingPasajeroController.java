@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.banduairlines.dto.tracking.VueloPasajeroDTO;
+import com.banduairlines.dto.tracking.ResumenVueloDTO;
 import com.banduairlines.service.tracking.TrackingPasajeroService;
 
 // RF-04: el usuario no registrado consulta su vuelo en Check-In (acuerdo del 16-10), no aquí.
@@ -23,7 +23,7 @@ public class TrackingPasajeroController {
 
     @GetMapping("/mis-vuelos")
     @PreAuthorize("hasRole('PASAJERO')")
-    public List<VueloPasajeroDTO> consultarMisVuelos() {
+    public List<ResumenVueloDTO> consultarMisVuelos() {
         return trackingPasajeroService.consultarMisVuelos();
     }
 }
