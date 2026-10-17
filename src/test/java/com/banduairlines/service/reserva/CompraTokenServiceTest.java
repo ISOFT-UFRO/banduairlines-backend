@@ -33,4 +33,4 @@ class CompraTokenServiceTest {
         assertThat(new CompraTokenService("").esValido(7L, token)).isFalse();
         assertThat(new CompraTokenService(null).generar(7L)).isNotBlank();
     }
-}
+}

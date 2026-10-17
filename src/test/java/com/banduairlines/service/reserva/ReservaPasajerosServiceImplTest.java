@@ -105,7 +105,7 @@ class ReservaPasajerosServiceImplTest {
 
     @Test
     void registrar_compraNoAbierta_lanza409() {
-        doThrow(new ConflictoException("x").conCodigo(ReservaAcceso.RESERVA_EXPIRADA)).when(reservaAcceso).exigirAbierta(reserva);
+        doThrow(new ConflictoException("x").conCodigo(ReservaAcceso.RESERVA_EXPIRADA)).when(reservaAcceso).exigirEnCurso(reserva);
 
         assertThatThrownBy(() -> service.registrar(1L, "tok", familia())).isInstanceOf(ConflictoException.class);
         verify(pasajeroRepository, never()).saveAll(any());

@@ -13,15 +13,15 @@ import org.springframework.web.bind.annotation.RestController;
 import com.banduairlines.dto.reserva.CrearReservaRequest;
 import com.banduairlines.dto.reserva.ReservaCreadaResponse;
 import com.banduairlines.dto.reserva.ReservaResponse;
-import com.banduairlines.service.reserva.ReservaCancelacionService;
 import com.banduairlines.service.reserva.ReservaConsultaService;
 import com.banduairlines.service.reserva.ReservaCreacionService;
 
 import jakarta.validation.Valid;
 
 /**
- * RESERVA, endpoints 1, 2 y 3.
- * Crear: público (invitado) o PASAJERO con JWT. Consultar y cancelar: JWT del dueño o X-Compra-Token del invitado
+ * RESERVA, endpoints 1 y 2.
+ * Crear: público (invitado) o PASAJERO con JWT. Consultar: JWT del dueño o X-Compra-Token del invitado.
+ * El endpoint 3 (POST /{reservaId}/cancelacion) está en ReservaPagoController, junto al endpoint 12 que es la misma ruta
  */
 @RestController
 @RequestMapping("/api/v1/reservas")
@@ -31,14 +31,11 @@ public class ReservaController {
 
     private final ReservaCreacionService reservaCreacionService;
     private final ReservaConsultaService reservaConsultaService;
-    private final ReservaCancelacionService reservaCancelacionService;
 
     public ReservaController(ReservaCreacionService reservaCreacionService,
-                             ReservaConsultaService reservaConsultaService,
-                             ReservaCancelacionService reservaCancelacionService) {
+                             ReservaConsultaService reservaConsultaService) {
         this.reservaCreacionService = reservaCreacionService;
         this.reservaConsultaService = reservaConsultaService;
-        this.reservaCancelacionService = reservaCancelacionService;
     }
 
     @PostMapping
@@ -52,12 +49,5 @@ public class ReservaController {
             @PathVariable Long reservaId,
             @RequestHeader(value = COMPRA_TOKEN, required = false) String compraToken) {
         return reservaConsultaService.obtener(reservaId, compraToken);
-    }
-
-    @PostMapping("/{reservaId}/cancelacion")
-    public ReservaResponse cancelarReserva(
-            @PathVariable Long reservaId,
-            @RequestHeader(value = COMPRA_TOKEN, required = false) String compraToken) {
-        return reservaCancelacionService.cancelar(reservaId, compraToken);
     }
 }

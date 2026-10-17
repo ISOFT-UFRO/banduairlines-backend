@@ -36,7 +36,6 @@ import com.banduairlines.exception.ReglaNegocioException;
 import com.banduairlines.model.enums.EstadoReserva;
 import com.banduairlines.model.enums.RolUsuario;
 import com.banduairlines.security.UsuarioAutenticado;
-import com.banduairlines.service.reserva.ReservaCancelacionService;
 import com.banduairlines.service.reserva.ReservaConsultaService;
 import com.banduairlines.service.reserva.ReservaCreacionService;
 
@@ -50,14 +49,13 @@ class ReservaControllerTest {
 
     @Mock private ReservaCreacionService reservaCreacionService;
     @Mock private ReservaConsultaService reservaConsultaService;
-    @Mock private ReservaCancelacionService reservaCancelacionService;
 
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders
-                .standaloneSetup(new ReservaController(reservaCreacionService, reservaConsultaService, reservaCancelacionService))
+                .standaloneSetup(new ReservaController(reservaCreacionService, reservaConsultaService))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
@@ -173,26 +171,5 @@ class ReservaControllerTest {
         mockMvc.perform(get("/api/v1/reservas/42"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("RECURSO_NO_ENCONTRADO"));
-    }
-
-    // ------------------------------------------------------------ endpoint 3
-
-    @Test
-    void cancelarReserva_responde200ConLaReservaCancelada() throws Exception {
-        when(reservaCancelacionService.cancelar(42L, "tok")).thenReturn(reserva(EstadoReserva.CANCELADA));
-
-        mockMvc.perform(post("/api/v1/reservas/42/cancelacion").header("X-Compra-Token", "tok"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.estado").value("CANCELADA"));
-    }
-
-    @Test
-    void cancelarReserva_yaConfirmada_responde409EstadoInvalido() throws Exception {
-        when(reservaCancelacionService.cancelar(42L, "tok"))
-                .thenThrow(new ConflictoException("La reserva está CONFIRMADA").conCodigo("ESTADO_INVALIDO"));
-
-        mockMvc.perform(post("/api/v1/reservas/42/cancelacion").header("X-Compra-Token", "tok"))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("ESTADO_INVALIDO"));
     }
 }

@@ -2,6 +2,7 @@ package com.banduairlines.service.reserva;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 import java.time.Clock;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 
@@ -32,6 +34,10 @@ class ReservaAccesoTest {
     private ReservaRepository reservaRepository;
     @Mock
     private UsuarioActual usuarioActual;
+    @Mock
+    private CobroReservaService cobroReservaService;
+    @Mock
+    private ObjectProvider<CobroReservaService> cobroProvider;
 
     private final CompraTokenService tokens = new CompraTokenService("secreto-de-prueba");
     private ReservaAcceso acceso;
@@ -39,7 +45,8 @@ class ReservaAccesoTest {
     @BeforeEach
     void setUp() {
         Clock clock = Clock.fixed(CompraReservaFixtures.AHORA.toInstant(ZoneOffset.UTC), ZoneOffset.UTC);
-        acceso = new ReservaAcceso(reservaRepository, usuarioActual, tokens, clock);
+        lenient().when(cobroProvider.getObject()).thenReturn(cobroReservaService);
+        acceso = new ReservaAcceso(reservaRepository, usuarioActual, tokens, clock, cobroProvider);
     }
 
     @Test
@@ -86,20 +93,20 @@ class ReservaAccesoTest {
     }
 
     @Test
-    void exigirAbierta_cancelada_lanzaEstadoInvalido() {
+    void exigirEnCurso_cancelada_lanzaEstadoInvalido() {
         Reserva reserva = CompraReservaFixtures.reserva(EstadoReserva.CANCELADA);
 
-        assertThatThrownBy(() -> acceso.exigirAbierta(reserva))
+        assertThatThrownBy(() -> acceso.exigirEnCurso(reserva))
                 .isInstanceOfSatisfying(ConflictoException.class,
                         e -> assertThat(e.getCodigo()).isEqualTo(ReservaAcceso.ESTADO_INVALIDO));
     }
 
     @Test
-    void exigirAbierta_vencida_lanzaReservaExpirada() {
+    void exigirEnCurso_vencida_lanzaReservaExpirada() {
         Reserva reserva = CompraReservaFixtures.reserva(EstadoReserva.PENDIENTE_PAGO);
         reserva.setExpiraEn(CompraReservaFixtures.AHORA.minusSeconds(1));
 
-        assertThatThrownBy(() -> acceso.exigirAbierta(reserva))
+        assertThatThrownBy(() -> acceso.exigirEnCurso(reserva))
                 .isInstanceOfSatisfying(ConflictoException.class,
                         e -> assertThat(e.getCodigo()).isEqualTo(ReservaAcceso.RESERVA_EXPIRADA));
     }

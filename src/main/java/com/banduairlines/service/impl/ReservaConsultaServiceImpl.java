@@ -32,7 +32,12 @@ public class ReservaConsultaServiceImpl implements ReservaConsultaService {
     @Override
     @Transactional(readOnly = true)
     public ReservaResponse obtener(Long reservaId, String compraToken) {
-        Reserva reserva = reservaAcceso.obtenerAutorizada(reservaId, compraToken);
+        return armarRespuesta(reservaAcceso.obtenerAutorizada(reservaId, compraToken));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ReservaResponse armarRespuesta(Reserva reserva) {
         return resumenReserva.armar(reserva,
                 pasajeroRepository.findByReserva_IdOrderByIdAsc(reserva.getId()),
                 boletoRepository.findByReserva_IdOrderByOrdenTramoAscIdAsc(reserva.getId()));
