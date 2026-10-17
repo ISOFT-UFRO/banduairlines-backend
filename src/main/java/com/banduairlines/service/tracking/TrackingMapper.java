@@ -5,7 +5,6 @@ import java.util.List;
 import com.banduairlines.dto.tracking.EventoEstadoDTO;
 import com.banduairlines.dto.tracking.ResumenVueloDTO;
 import com.banduairlines.dto.tracking.SeguimientoVueloDTO;
-import com.banduairlines.dto.tracking.VueloPasajeroDTO;
 import com.banduairlines.model.EventoEstado;
 import com.banduairlines.model.SeguimientoVuelo;
 
@@ -52,20 +51,6 @@ public final class TrackingMapper {
                 s.getOrigenIata(),
                 s.getDestinoIata(),
                 s.getSalidaProgramada(),
-                s.getEstadoActual(),
-                s.retrasoVigente(),
-                s.getUltimaActualizacion()
-        );
-    }
-
-    public static VueloPasajeroDTO aVueloPasajeroDTO(SeguimientoVuelo s) {
-        return new VueloPasajeroDTO(
-                s.getVueloId(),
-                s.getCodigoVuelo(),
-                s.getOrigenIata(),
-                s.getDestinoIata(),
-                s.getSalidaProgramada(),
-                s.getLlegadaProgramada(),
                 s.getEstadoActual(),
                 s.retrasoVigente(),
                 s.getUltimaActualizacion()

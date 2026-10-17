@@ -1,18 +1,17 @@
 package com.banduairlines.service.tracking.adaptador;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.banduairlines.model.enums.EstadoReserva;
 import com.banduairlines.repository.TrackingBoletoLecturaRepository;
 import com.banduairlines.repository.TrackingReservaLecturaRepository;
-import com.banduairlines.service.tracking.puerto.ReservaExterna;
-import com.banduairlines.service.tracking.puerto.ReservaExternaPort;
+import com.banduairlines.service.tracking.puerto.VuelosDelUsuarioPort;
 
 @Component
-public class ReservaExternaReservaAdapter implements ReservaExternaPort {
+public class ReservaExternaReservaAdapter implements VuelosDelUsuarioPort {
 
     private final TrackingReservaLecturaRepository reservas;
     private final TrackingBoletoLecturaRepository boletos;
@@ -23,27 +22,10 @@ public class ReservaExternaReservaAdapter implements ReservaExternaPort {
         this.boletos = boletos;
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public Optional<ReservaExterna> buscarPorCodigo(String codigoReserva) {
-        return reservas.buscarPorCodigo(codigoReserva);
-    }
-
+    // Provisorio: reemplazar por el servicio de Cuentas (GET /cuentas/actual/vuelos) cuando esté en develop.
     @Override
     @Transactional(readOnly = true)
     public List<Long> vueloIdsDeUsuario(Long usuarioId) {
-        return boletos.buscarVueloIdsPorReservas(reservas.buscarIdsPorUsuario(usuarioId));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<Long> vueloIdsDeReserva(Long reservaId) {
-        return boletos.buscarVueloIdsPorReservas(List.of(reservaId));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean documentoPerteneceAReserva(Long reservaId, String numeroDocumento) {
-        return boletos.contarPorReservaYDocumento(reservaId, numeroDocumento) > 0;
+        return boletos.buscarVueloIdsPorReservas(reservas.buscarIdsPorUsuario(usuarioId, EstadoReserva.CONFIRMADA));
     }
 }
