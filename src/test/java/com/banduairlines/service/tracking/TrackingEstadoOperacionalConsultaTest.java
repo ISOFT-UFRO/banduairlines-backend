@@ -1,6 +1,9 @@
 package com.banduairlines.service.tracking;
 
+import static com.banduairlines.model.enums.EstadoVuelo.ATERRIZADO;
+import static com.banduairlines.model.enums.EstadoVuelo.DESPEGADO;
 import static com.banduairlines.model.enums.EstadoVuelo.EMBARCANDO;
+import static com.banduairlines.model.enums.EstadoVuelo.EN_VUELO;
 import static com.banduairlines.model.enums.EstadoVuelo.PROGRAMADO;
 import static com.banduairlines.model.enums.EstadoVuelo.RETRASADO;
 import static com.banduairlines.model.enums.OrigenEvento.MANUAL;
@@ -53,8 +56,21 @@ class TrackingEstadoOperacionalConsultaTest {
         var estados = consulta.estadosDeVuelos(List.of(1L, 2L));
 
         assertThat(estados).containsOnlyKeys(1L, 2L);
-        assertThat(estados.get(1L)).isEqualTo(new EstadoOperacional(PROGRAMADO, 0));
-        assertThat(estados.get(2L)).isEqualTo(new EstadoOperacional(EMBARCANDO, 30));
+        assertThat(estados.get(1L)).isEqualTo(new EstadoOperacional(PROGRAMADO, 0, AHORA));
+        assertThat(estados.get(2L)).isEqualTo(new EstadoOperacional(EMBARCANDO, 30, AHORA.plusMinutes(5)));
+    }
+
+    @Test
+    void estadosDeVuelos_vueloAterrizado_entregaLaHoraDeAterrizaje() {
+        SeguimientoVuelo aterrizado = seguimiento(3L);
+        aterrizado.transicionar(EMBARCANDO, SISTEMA, null, null, null, SALIDA.minusMinutes(45));
+        aterrizado.transicionar(DESPEGADO, SISTEMA, null, null, null, SALIDA);
+        aterrizado.transicionar(EN_VUELO, SISTEMA, null, null, null, SALIDA.plusMinutes(15));
+        aterrizado.transicionar(ATERRIZADO, SISTEMA, null, null, null, SALIDA.plusHours(2));
+        when(seguimientos.findByVueloIdInOrderBySalidaProgramadaAsc(List.of(3L))).thenReturn(List.of(aterrizado));
+
+        assertThat(consulta.estadosDeVuelos(List.of(3L)).get(3L))
+                .isEqualTo(new EstadoOperacional(ATERRIZADO, 0, SALIDA.plusHours(2)));
     }
 
     @Test
