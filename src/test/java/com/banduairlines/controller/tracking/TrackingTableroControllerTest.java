@@ -18,6 +18,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.banduairlines.repository.UsuarioRepository;
+import com.banduairlines.service.impl.JwtService;
 import com.banduairlines.dto.tracking.ResumenVueloDTO;
 import com.banduairlines.model.enums.EstadoVuelo;
 import com.banduairlines.security.JwtAuthenticationFilter;
@@ -34,6 +36,13 @@ class TrackingTableroControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    // Dependencias del filtro JWT de Cuentas; los tests autentican con spring-security-test.
+    @MockitoBean
+    private JwtService jwtService;
+
+    @MockitoBean
+    private UsuarioRepository usuarioRepository;
 
     @MockitoBean
     private TrackingTableroService tableroService;

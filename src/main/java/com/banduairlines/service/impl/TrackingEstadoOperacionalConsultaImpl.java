@@ -35,6 +35,6 @@ public class TrackingEstadoOperacionalConsultaImpl implements EstadoOperacionalC
         return seguimientos.findByVueloIdInOrderBySalidaProgramadaAsc(ids).stream()
                 .collect(Collectors.toUnmodifiableMap(
                         SeguimientoVuelo::getVueloId,
-                        s -> new EstadoOperacional(s.getEstadoActual(), s.retrasoVigente())));
+                        s -> new EstadoOperacional(s.getEstadoActual(), s.retrasoVigente(), s.getUltimaActualizacion())));
     }
 }
