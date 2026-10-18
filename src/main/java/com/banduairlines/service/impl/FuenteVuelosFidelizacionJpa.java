@@ -4,7 +4,7 @@ import com.banduairlines.exception.ServicioExternoException;
 import com.banduairlines.model.enums.EstadoVuelo;
 import com.banduairlines.repository.*;
 import com.banduairlines.service.cuenta.*;
-import org.springframework.data.domain.PageRequest;
+import com.banduairlines.service.tracking.EstadoOperacionalConsulta;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
@@ -14,10 +14,13 @@ import java.util.*;
 public class FuenteVuelosFidelizacionJpa implements FuenteVuelosFidelizacion {
     private final VuelosFidelizacionRepository vuelos;
     private final CuentaPuntosRepository cuentas;
+    private final EstadoOperacionalConsulta estadosTracking;
 
-    public FuenteVuelosFidelizacionJpa(VuelosFidelizacionRepository vuelos, CuentaPuntosRepository cuentas) {
+    public FuenteVuelosFidelizacionJpa(VuelosFidelizacionRepository vuelos, CuentaPuntosRepository cuentas,
+                                       EstadoOperacionalConsulta estadosTracking) {
         this.vuelos = vuelos;
         this.cuentas = cuentas;
+        this.estadosTracking = estadosTracking;
     }
 
     @Override
@@ -40,16 +43,13 @@ public class FuenteVuelosFidelizacionJpa implements FuenteVuelosFidelizacion {
                 if (pasajero.getTipoDocumento() != usuario.getTipoDocumento()
                         || !normalizar(usuario.getNumeroDocumento()).equals(normalizar(pasajero.getNumeroDocumento()))) continue;
                 var vuelo = boleto.getVueloId();
-                var estados = vuelos.seguimiento(vuelo.getId(), PageRequest.of(0, 1));
-                if (estados.isEmpty() || estados.getFirst().getEstado() == null)
-                    throw noDisponible("Tracking no tiene estado para el vuelo " + vuelo.getId());
-                var ultimo = estados.getFirst();
-                if (ultimo.getEstado() != EstadoVuelo.ATERRIZADO) continue;
+                var estado = estadosTracking.estadosDeVuelos(List.of(vuelo.getId())).get(vuelo.getId());
+                if (estado == null || estado.estado() != EstadoVuelo.ATERRIZADO) continue;
                 var distancia = vuelo.getRuta().getDistanciaKm();
-                if (distancia == null || distancia <= 0 || ultimo.getRegistradoEn() == null)
-                    throw noDisponible("Falta distancia o fecha de llegada del vuelo " + vuelo.getId());
+                if (distancia == null || distancia <= 0)
+                    throw noDisponible("Falta distancia del vuelo " + vuelo.getId());
                 resultado.putIfAbsent(vuelo.getId(), new TramoRecorrido(vuelo.getId(), reserva.getCodigoReserva(),
-                        ultimo.getRegistradoEn(), BigDecimal.valueOf(distancia)));
+                        estado.ultimaActualizacion(), BigDecimal.valueOf(distancia)));
             }
         }
         return List.copyOf(resultado.values());
