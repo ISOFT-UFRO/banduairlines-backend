@@ -12,7 +12,11 @@ public final class SecurityRoutes {
             "/actuator/health",
             "/actuator/health/**",
             API + "/pagos/notificaciones",
-            API + "/checkin/invitado/**"
+            API + "/checkin/invitado/**",
+            API + "/reservas/*/servicios",
+            API + "/reservas/*/promocion",
+            API + "/reservas/*/pago",
+            API + "/reservas/*/cancelacion"
     };
 
     public static final String[] PUBLICAS_GET = {
