@@ -1,13 +1,17 @@
 package com.banduairlines.repository;
 
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import java.util.List;
 
 import com.banduairlines.model.Boleto;
+import com.banduairlines.model.enums.ClaseCabina;
+import com.banduairlines.model.enums.EstadoReserva;
 
-public interface BoletoRepository extends JpaRepository<Boleto, Long>{
+public interface BoletoRepository extends JpaRepository<Boleto, Long> {
+
     @Query("""
             select distinct b.vueloId.id
             from Boleto b
@@ -17,5 +21,17 @@ public interface BoletoRepository extends JpaRepository<Boleto, Long>{
             order by b.vueloId.id
             """)
     List<Long> buscarIdsVuelosConfirmados(@Param("idUsuario") Long idUsuario);
-    
+
+
+    @Query("""
+            SELECT COUNT(b) FROM Boleto b
+            WHERE b.vueloId.id = :vueloId
+              AND b.tarifaVueloId.claseCabina = :claseCabina
+              AND b.reserva.estado <> :estadoExcluido
+            """)
+    long contarOcupadosPorVueloYClaseCabina(
+            @Param("vueloId") Long vueloId,
+            @Param("claseCabina") ClaseCabina claseCabina,
+            @Param("estadoExcluido") EstadoReserva estadoExcluido
+    );
 }
