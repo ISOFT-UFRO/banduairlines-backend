@@ -12,10 +12,17 @@ import com.banduairlines.model.enums.ClaseCabina;
 import com.banduairlines.model.enums.EstadoPago;
 import com.banduairlines.model.enums.EstadoReserva;
 import com.banduairlines.model.enums.TipoPasajero;
+import java.util.Optional;
 
 public interface ReservaRepository extends JpaRepository<Reserva, Long>{
 
     java.util.Optional<Reserva> findByCodigoReservaAndUsuario_Id(String codigoReserva, Long idUsuario);
+
+   
+    Optional<Reserva> findByCodigoReservaAndEmailContacto(String codigoReserva, String emailContacto);
+    Optional<Reserva> findByCodigoReserva(String codigoReserva);
+    List<Reserva> findByUsuarioId(Long usuarioId);
+
 
     @Query("select r.estado as estado, count(r.id) as cantidad from Reserva r " +
             "where r.createdAt >= :desde and r.createdAt < :hasta group by r.estado")
