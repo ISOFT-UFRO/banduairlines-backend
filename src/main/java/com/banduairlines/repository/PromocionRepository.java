@@ -5,7 +5,7 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-
+import java.util.Optional;
 import com.banduairlines.model.Promocion;
 
 public interface PromocionRepository extends JpaRepository<Promocion, Long> {
@@ -21,4 +21,6 @@ public interface PromocionRepository extends JpaRepository<Promocion, Long> {
     boolean existsByCodigo(String codigo);
 
     boolean existsByCodigoAndIdNot(String codigo, Long id);
+
+    Optional<Promocion> findByCodigoIgnoreCase(String codigo);
 }

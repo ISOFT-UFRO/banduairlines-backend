@@ -17,4 +17,6 @@ public interface ExtraRepository extends JpaRepository<Extra, Long> {
             order by extra.tipo
             """)
     List<Extra> listarAdministracion(@Param("activo") Boolean activo);
+
+    List<Extra> findByActivoTrueOrderByIdAsc();
 }
