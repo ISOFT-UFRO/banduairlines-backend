@@ -379,6 +379,4 @@ public interface BoletoRepository extends JpaRepository<Boleto, Long> {
 }
 
 
-    List<Boleto> findByReserva(Reserva reserva);
-}
 
