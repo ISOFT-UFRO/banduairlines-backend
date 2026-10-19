@@ -12,6 +12,9 @@ import com.banduairlines.dto.reportes.PasajeroTipoProjection;
 import com.banduairlines.dto.reportes.VentaExtraProjection;
 import com.banduairlines.model.Boleto;
 import com.banduairlines.model.Pasajero;
+import com.banduairlines.dto.reportes.PasajeroTipoProjection;
+import com.banduairlines.dto.reportes.VentaExtraProjection;
+import com.banduairlines.model.Boleto;
 import com.banduairlines.model.Reserva;
 import com.banduairlines.model.enums.ClaseCabina;
 import com.banduairlines.model.enums.EstadoPago;
@@ -374,3 +377,8 @@ public interface BoletoRepository extends JpaRepository<Boleto, Long> {
             @Param("packId") Long packId,
             @Param("claseCabina") ClaseCabina claseCabina);
 }
+
+
+    List<Boleto> findByReserva(Reserva reserva);
+}
+
