@@ -17,6 +17,10 @@ public final class SecurityRoutes {
                         API + "/pagos/notificaciones", // PAGOS: callback servidor-a-servidor de Flow (no trae token)
                         API + "/pagos/retorno", // PAGOS: retorno del pasajero desde Flow
                         API + "/pagos/reembolsos/notificaciones", // PAGOS: callback de reembolsos de Flow
+                        API + "/reservas/*/servicios",
+                        API + "/reservas/*/promocion",
+                        API + "/reservas/*/pago",
+                        API + "/reservas/*/cancelacion"
         };
 
         public static final String[] PUBLICAS_GET = {
