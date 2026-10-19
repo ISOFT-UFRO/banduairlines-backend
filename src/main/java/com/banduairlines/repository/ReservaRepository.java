@@ -49,14 +49,11 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
 
     Optional<Reserva> findByCodigoReservaIgnoreCase(String codigoReserva);
 
-    // Métodos provenientes de Develop
     Optional<Reserva> findByCodigoReservaAndEmailContacto(String codigoReserva, String emailContacto);
     
     List<Reserva> findByUsuarioId(Long usuarioId);
 
-    // ==========================================
     // REPORTES
-    // ==========================================
 
     @Query("select r.estado as estado, count(r.id) as cantidad from Reserva r " +
             "where r.createdAt >= :desde and r.createdAt < :hasta group by r.estado")
