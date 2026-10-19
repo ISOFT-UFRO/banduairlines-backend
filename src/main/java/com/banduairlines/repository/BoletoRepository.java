@@ -6,14 +6,14 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import com.banduairlines.dto.reportes.PasajeroTipoProjection;
-import com.banduairlines.dto.reportes.VentaExtraProjection;
+import java.util.List;
 import com.banduairlines.model.Boleto;
-import com.banduairlines.model.Reserva;
 import com.banduairlines.model.enums.ClaseCabina;
 import com.banduairlines.model.enums.EstadoPago;
 import com.banduairlines.model.enums.EstadoReserva;
 import com.banduairlines.model.enums.TipoPasajero;
+import com.banduairlines.dto.reportes.PasajeroTipoProjection;
+import com.banduairlines.dto.reportes.VentaExtraProjection;
 
 public interface BoletoRepository extends JpaRepository<Boleto, Long>{
     @Query("""
@@ -291,8 +291,5 @@ public interface BoletoRepository extends JpaRepository<Boleto, Long>{
             @Param("tipoPasajero") TipoPasajero tipoPasajero,
             @Param("packId") Long packId,
             @Param("claseCabina") ClaseCabina claseCabina);
-
-
-    List<Boleto> findByReserva(Reserva reserva);
 }
 
