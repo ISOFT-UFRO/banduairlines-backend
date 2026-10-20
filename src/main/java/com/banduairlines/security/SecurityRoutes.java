@@ -14,9 +14,9 @@ public final class SecurityRoutes {
                         API + "/pagos/notificaciones",
                         API + "/checkin/invitado/**",
                         API + "/auth/**", // CUENTA: login y registro
-                        API + "/pagos/notificaciones", // PAGOS: callback servidor-a-servidor de Flow (no trae token)
-                        API + "/pagos/retorno", // PAGOS: retorno del pasajero desde Flow
-                        API + "/pagos/reembolsos/notificaciones", // PAGOS: callback de reembolsos de Flow
+                        API + "/pagos/notificaciones",
+                        API + "/pagos/retorno",
+                        API + "/pagos/reembolsos/notificaciones",
                         API + "/reservas/*/servicios",
                         API + "/reservas/*/promocion",
                         API + "/reservas/*/pago",
@@ -56,5 +56,10 @@ public final class SecurityRoutes {
 
         public static final String[] SOLO_ADMIN = {
                         API + "/admin/**"
+        };
+        
+        public static final String[] PAGOS_API = {
+                        API + "/internas/**",
+                        API + "/pagos/**",
         };
 }
