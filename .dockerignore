@@ -1,0 +1,23 @@
+# Carpeta de compilación local de Maven
+target/
+
+
+# Archivos de configuración de IDEs locales
+.idea/
+.vscode/
+*.iml
+*.log
+
+
+# Entorno y credenciales (Seguridad)
+.env
+
+
+# Control de versiones
+.git/
+.gitignore
+
+
+# Configuración de Docker
+Dockerfile
+docker-compose.yml
