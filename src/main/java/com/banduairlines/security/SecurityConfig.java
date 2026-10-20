@@ -58,6 +58,7 @@ public class SecurityConfig {
                     auth.requestMatchers(HttpMethod.POST, SecurityRoutes.AUTH_PUBLICAS_POST).permitAll();
                     auth.requestMatchers(HttpMethod.GET, SecurityRoutes.AUTH_CODIGOS_RECUPERACION).permitAll();
                     auth.requestMatchers(HttpMethod.PUT, SecurityRoutes.AUTH_CODIGOS_RECUPERACION).permitAll();
+                    auth.requestMatchets(SecurityRoutes.SecurityRoutes.PAGOS_API).anyRequest().authenticated();
 
                     if (!securityEnabled) {
                         auth.anyRequest().permitAll();
