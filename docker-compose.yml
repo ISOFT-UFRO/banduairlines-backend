@@ -21,10 +21,7 @@ services:
     container_name: bandu_airlines_backend
     ports:
       - "8080:8080"
-    env_file:             # <--- AGREGAR (para que Docker lea el .env)
-      - .env              # <--- AGREGAR
     environment:
-      APP_SEED_ENABLED: "true"                # <--- AGREGAR (activa datos de prueba)
       SPRING_JPA_HIBERNATE_DDL_AUTO: update   # <--- AGREGAR (crea las tablas automáticamente)
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${DB_NAME:-bandu_airlines_db}
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-postgres}
