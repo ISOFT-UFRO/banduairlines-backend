@@ -83,20 +83,28 @@ jobs:
 
       - name: Despliegue VPS y Healthcheck
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          ENV_PROD: ${{ secrets.ENV_PROD }}
+          ENV_DEV: ${{ secrets.ENV_DEV }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: ENV_PROD,ENV_DEV
           script: |
             cd /home/integracion/banduairlines-infra
 
-            # 1. Servicio y URL de salud según la rama
+            # 1. Servicio, URL de salud y archivo .env según la rama
             if [ "${{ github.ref_name }}" = "main" ]; then
               SERVICE_NAME="backend-main"
               TARGET_URL="https://isoft.lazycat.app/actuator/health"
+              echo "$ENV_PROD" > .env.prod
+              echo "GITHUB_USER=${{ github.actor }}" >> .env.prod
             else
               SERVICE_NAME="backend-develop"
               TARGET_URL="https://dev.isoft.lazycat.app/actuator/health"
+              echo "$ENV_DEV" > .env.dev
+              echo "GITHUB_USER=${{ github.actor }}" >> .env.dev
             fi
 
             mostrar_diagnostico() {
